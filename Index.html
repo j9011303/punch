@@ -6,30 +6,46 @@
   <title>門市打卡</title>
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", sans-serif; margin: 0; background: #f4f5f7; color: #222; }
-    .wrap { max-width: 480px; margin: 0 auto; padding: 20px 16px 40px; }
-    h1 { font-size: 20px; text-align: center; margin: 12px 0 6px; }
-    .who { text-align: center; font-size: 14px; color: #1a7f37; margin-bottom: 18px; min-height: 18px; }
-    .card { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
-    label { display: block; font-size: 13px; color: #666; margin: 14px 0 6px; }
-    select { width: 100%; padding: 12px; font-size: 16px; border: 1px solid #d0d3d8; border-radius: 10px; background: #fff; }
-    .types { display: flex; gap: 10px; margin-top: 16px; }
-    .types button { flex: 1; padding: 14px; font-size: 16px; border: 2px solid #d0d3d8; border-radius: 10px; background: #fff; color: #333; }
-    .types button.on { border-color: #1a7f37; background: #e7f6ec; color: #1a7f37; font-weight: 700; }
-    .submit { width: 100%; margin-top: 22px; padding: 16px; font-size: 18px; font-weight: 700; border: none; border-radius: 12px; background: #06c755; color: #fff; }
-    .submit:disabled { background: #9bbfa6; }
-    .msg { margin-top: 18px; padding: 14px; border-radius: 10px; font-size: 15px; display: none; white-space: pre-line; }
-    .msg.ok { background: #e7f6ec; color: #1a7f37; display: block; }
-    .msg.err { background: #fdeaea; color: #c0392b; display: block; }
-    .msg.info { background: #eef3fb; color: #2c5fa8; display: block; }
-    .hint { font-size: 12px; color: #999; margin-top: 16px; text-align: center; }
+    body { font-family: -apple-system, "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", sans-serif;
+           margin: 0; background: #fbf1e3; color: #4a3a2e; }
+    .wrap { max-width: 480px; margin: 0 auto; padding: 22px 16px 48px; }
+    h1 { font-size: 22px; text-align: center; margin: 10px 0 4px; color: #b8551f; }
+    .who { text-align: center; font-size: 14px; color: #a96a3a; margin-bottom: 18px; min-height: 18px; }
+    .card { background: #fffaf3; border-radius: 16px; padding: 20px; box-shadow: 0 4px 14px rgba(184,85,31,.10); border: 1px solid #f1ddc6; }
+    label { display: block; font-size: 13px; color: #9a7a5e; margin: 16px 0 6px; font-weight: 600; }
+    select { width: 100%; padding: 13px; font-size: 16px; border: 1.5px solid #e7cfb2; border-radius: 12px; background: #fffdfa; color: #4a3a2e; }
+    .types { display: flex; gap: 10px; margin-top: 18px; }
+    .types button { flex: 1; padding: 15px; font-size: 17px; border: 2px solid #e7cfb2; border-radius: 12px; background: #fffdfa; color: #8a6a4e; font-weight: 600; }
+    .types button.on { border-color: #e07a3f; background: #fdeadd; color: #c2541d; }
+    .submit { width: 100%; margin-top: 22px; padding: 17px; font-size: 19px; font-weight: 800; border: none; border-radius: 14px;
+              background: linear-gradient(135deg,#ef8a44,#df6a2b); color: #fff; box-shadow: 0 4px 12px rgba(223,106,43,.35); }
+    .submit:disabled { background: #e7c4a8; box-shadow: none; }
+    .result { margin-top: 20px; border-radius: 14px; padding: 20px 16px; text-align: center; display: none; }
+    .result .icon { font-size: 46px; line-height: 1; }
+    .result .title { font-size: 22px; font-weight: 800; margin: 8px 0 4px; }
+    .result .detail { font-size: 15px; line-height: 1.6; }
+    .result.ok { background: #eaf7ec; border: 1.5px solid #9ed3a6; display: block; }
+    .result.ok .title { color: #2e7d32; }
+    .result.ok .detail { color: #3a6b3d; }
+    .result.err { background: #fdeae2; border: 1.5px solid #f0b49c; display: block; }
+    .result.err .title { color: #c0432a; }
+    .result.err .detail { color: #a4492f; }
+    .result.info { background: #fdf2e4; border: 1.5px solid #f0d6b0; display: block; }
+    .result.info .title { color: #b5712f; font-size: 17px; }
+    .today { margin-top: 20px; background: #fff6ea; border: 1px solid #f1ddc6; border-radius: 12px; padding: 14px 16px; display: none; }
+    .today h3 { margin: 0 0 10px; font-size: 14px; color: #b8551f; }
+    .today .row { display: flex; justify-content: space-between; font-size: 15px; padding: 5px 0; color: #5a4636; border-bottom: 1px dashed #eeddc8; }
+    .today .row:last-child { border-bottom: none; }
+    .today .t { font-weight: 700; color: #c2541d; }
+    .today .empty { font-size: 14px; color: #b69a80; }
+    .hint { font-size: 12px; color: #b69a80; margin-top: 16px; text-align: center; }
     #app { display: none; }
   </style>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
   <div class="wrap">
-    <h1>🏪 門市打卡</h1>
+    <h1>🍲 門市打卡</h1>
     <div id="who" class="who"></div>
     <div id="app" class="card">
       <div id="bindBox" style="display:none">
@@ -46,19 +62,19 @@
         </div>
         <button id="submit" class="submit">打卡</button>
       </div>
-      <div id="msg" class="msg"></div>
+      <div id="result" class="result"></div>
+      <div id="today" class="today"></div>
       <div class="hint">需開啟定位權限</div>
     </div>
   </div>
 
 <script>
-  // ====== 設定 ======
   const LIFF_ID = '2010314288-Vh9dMEyC';
   const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzGcQLml4LSMtGpCk14P7QT6Hn2eA4Mz0s-REha5O9IBXoUvgoxQIqnANsFOso7XRy6/exec';
+  const LS_STORE = 'punch_last_store';
   let ID_TOKEN = '';
   let PUNCH_TYPE = '上班';
 
-  // ====== 呼叫後端 API（text/plain 避免 CORS 預檢）======
   async function api(action, params) {
     const res = await fetch(EXEC_URL, {
       method: 'POST',
@@ -68,7 +84,6 @@
     return await res.json();
   }
 
-  // ====== 啟動 ======
   liff.init({ liffId: LIFF_ID }).then(function () {
     if (!liff.isLoggedIn()) { liff.login(); return; }
     ID_TOKEN = liff.getIDToken();
@@ -76,46 +91,65 @@
     loadData();
   }).catch(function (e) {
     document.getElementById('app').style.display = 'block';
-    showMsg('err', 'LINE 初始化失敗：' + e);
+    showResult('err', '❌', 'LINE 初始化失敗', String(e));
   });
 
   function loadData() {
-    showMsg('info', '載入中…');
+    showResult('info', '⏳', '載入中…', '');
     api('bootstrap', { idToken: ID_TOKEN }).then(function (data) {
-      if (!data.ok) { showMsg('err', data.error || '載入失敗'); return; }
-      showMsg('', '');
+      if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
+      hideResult();
       const storeSel = document.getElementById('store');
       (data.stores || []).forEach(function (s) { storeSel.add(new Option(s.store_name, s.store_id)); });
       if (data.bound) {
         document.getElementById('punchBox').style.display = 'block';
         document.getElementById('who').textContent = '👤 ' + data.emp.name;
+        var saved = localStorage.getItem(LS_STORE) || data.emp.store_id || '';
+        if (saved) storeSel.value = saved;
+        storeSel.onchange = function () { localStorage.setItem(LS_STORE, storeSel.value); };
+        loadToday();
       } else {
         document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
         document.getElementById('bindBox').style.display = 'block';
         const bindEmp = document.getElementById('bindEmp');
         (data.employees || []).forEach(function (e) { bindEmp.add(new Option(e.name, e.emp_id)); });
       }
-    }).catch(function (e) { showMsg('err', '載入錯誤：' + e); });
+    }).catch(function (e) { showResult('err', '❌', '載入錯誤', String(e)); });
   }
 
-  // ====== 綁定 ======
+  // ====== 今日打卡記錄 ======
+  function loadToday() {
+    api('today', { idToken: ID_TOKEN }).then(function (data) {
+      if (!data.ok) return;
+      const box = document.getElementById('today');
+      var html = '<h3>📋 今日打卡記錄（' + (data.date || '') + '）</h3>';
+      if (!data.punches || data.punches.length === 0) {
+        html += '<div class="empty">今天還沒有打卡記錄</div>';
+      } else {
+        data.punches.forEach(function (p) {
+          html += '<div class="row"><span>' + p.type + '</span><span class="t">' + p.time + '</span></div>';
+        });
+      }
+      box.innerHTML = html;
+      box.style.display = 'block';
+    }).catch(function () {});
+  }
+
   document.getElementById('bindBtn').onclick = function () {
     const sel = document.getElementById('bindEmp');
-    if (!sel.value) return showMsg('err', '請選擇你的名字');
+    if (!sel.value) return showResult('err', '❌', '請選擇你的名字', '');
     this.disabled = true;
-    showMsg('info', '綁定中…');
+    showResult('info', '⏳', '綁定中…', '');
     api('bind', { idToken: ID_TOKEN, emp_id: sel.value }).then(function (res) {
-      if (res.ok) { showMsg('ok', '✅ 綁定成功，' + res.name + '，請重新整理開始打卡'); setTimeout(function () { location.reload(); }, 1500); }
-      else { document.getElementById('bindBtn').disabled = false; showMsg('err', '❌ ' + res.reason); }
-    }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showMsg('err', String(e)); });
+      if (res.ok) { showResult('ok', '✅', '綁定成功', res.name + '，即將進入打卡'); setTimeout(function () { location.reload(); }, 1500); }
+      else { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定失敗', res.reason || ''); }
+    }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
   };
 
-  // ====== 上班/下班 ======
   document.getElementById('btnIn').onclick = function () { setType('上班', this); };
   document.getElementById('btnOut').onclick = function () { setType('下班', this); };
   function setType(t, btn) { PUNCH_TYPE = t; document.querySelectorAll('.types button').forEach(function (b) { b.classList.remove('on'); }); btn.classList.add('on'); }
 
-  // ====== GPS ======
   function getPosition() {
     return new Promise(function (resolve, reject) {
       if (!navigator.geolocation) return reject(new Error('此裝置不支援定位'));
@@ -130,13 +164,13 @@
     try { const r = await fetch('https://api.ipify.org?format=json'); return (await r.json()).ip; } catch (e) { return ''; }
   }
 
-  // ====== 打卡 ======
   document.getElementById('submit').onclick = async function () {
     const btn = this;
     const store = document.getElementById('store');
-    if (!store.value) return showMsg('err', '請選擇店別');
+    if (!store.value) return showResult('err', '❌', '請選擇店別', '');
+    localStorage.setItem(LS_STORE, store.value);
     btn.disabled = true;
-    showMsg('info', '定位中…請稍候');
+    showResult('info', '📍', '定位中…請稍候', '');
     try {
       const pos = await getPosition();
       const ip = await getClientIp();
@@ -146,16 +180,23 @@
         client_ip: ip, user_agent: navigator.userAgent
       });
       btn.disabled = false;
-      if (res.ok) showMsg('ok', '✅ ' + res.name + ' ' + PUNCH_TYPE + '打卡成功\n' + res.time);
-      else showMsg('err', '❌ ' + res.reason);
-    } catch (e) { btn.disabled = false; showMsg('err', e.message || String(e)); }
+      var storeName = store.options[store.selectedIndex].text;
+      if (res.ok) {
+        showResult('ok', '✅', PUNCH_TYPE + '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
+        loadToday();
+      } else {
+        showResult('err', '❌', PUNCH_TYPE + '打卡失敗', res.reason || '');
+      }
+    } catch (e) { btn.disabled = false; showResult('err', '❌', '打卡失敗', e.message || String(e)); }
   };
 
-  function showMsg(type, text) {
-    const m = document.getElementById('msg');
-    if (!type) { m.className = 'msg'; m.textContent = ''; m.style.display = 'none'; return; }
-    m.className = 'msg ' + type; m.textContent = text;
+  function showResult(type, icon, title, detail) {
+    const r = document.getElementById('result');
+    r.className = 'result ' + type;
+    r.innerHTML = '<div class="icon">' + icon + '</div><div class="title">' + title + '</div>' +
+                  (detail ? '<div class="detail">' + detail + '</div>' : '');
   }
+  function hideResult() { document.getElementById('result').className = 'result'; }
 </script>
 </body>
 </html>
