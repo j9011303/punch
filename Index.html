@@ -14,6 +14,7 @@
     .card { background: #fffaf3; border-radius: 16px; padding: 20px; box-shadow: 0 4px 14px rgba(184,85,31,.10); border: 1px solid #f1ddc6; }
     label { display: block; font-size: 13px; color: #9a7a5e; margin: 16px 0 6px; font-weight: 600; }
     select { width: 100%; padding: 13px; font-size: 16px; border: 1.5px solid #e7cfb2; border-radius: 12px; background: #fffdfa; color: #4a3a2e; }
+    .storebox { padding: 16px; font-size: 20px; text-align: center; border: 1.5px solid #e7cfb2; border-radius: 12px; background: #fff3e3; font-weight: 800; color: #c2541d; }
     .types { display: flex; gap: 10px; margin-top: 18px; }
     .types button { flex: 1; padding: 15px; font-size: 17px; border: 2px solid #e7cfb2; border-radius: 12px; background: #fffdfa; color: #8a6a4e; font-weight: 600; }
     .types button.on { border-color: #e07a3f; background: #fdeadd; color: #c2541d; }
@@ -55,7 +56,7 @@
       </div>
       <div id="punchBox" style="display:none">
         <label>店別</label>
-        <select id="store"></select>
+        <div class="storebox" id="storeName">—</div>
         <div class="types">
           <button id="btnIn" class="on" data-type="上班">上班</button>
           <button id="btnOut" data-type="下班">下班</button>
@@ -71,9 +72,9 @@
 <script>
   const LIFF_ID = '2010314288-Vh9dMEyC';
   const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzGcQLml4LSMtGpCk14P7QT6Hn2eA4Mz0s-REha5O9IBXoUvgoxQIqnANsFOso7XRy6/exec';
-  const LS_STORE = 'punch_last_store';
   let ID_TOKEN = '';
   let PUNCH_TYPE = '上班';
+  let STORE_ID = '';
 
   async function api(action, params) {
     const res = await fetch(EXEC_URL, {
@@ -99,14 +100,22 @@
     api('bootstrap', { idToken: ID_TOKEN }).then(function (data) {
       if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
       hideResult();
-      const storeSel = document.getElementById('store');
-      (data.stores || []).forEach(function (s) { storeSel.add(new Option(s.store_name, s.store_id)); });
       if (data.bound) {
         document.getElementById('punchBox').style.display = 'block';
         document.getElementById('who').textContent = '👤 ' + data.emp.name;
-        var saved = localStorage.getItem(LS_STORE) || data.emp.store_id || '';
-        if (saved) storeSel.value = saved;
-        storeSel.onchange = function () { localStorage.setItem(LS_STORE, storeSel.value); };
+        STORE_ID = data.emp.store_id || '';
+        var sname = data.emp.store_name || '';
+        if (!STORE_ID || !sname) {
+          // 後台未設定店別
+          (data.stores || []).forEach(function (s) { if (s.store_id === STORE_ID) sname = s.store_name; });
+        }
+        if (STORE_ID) {
+          document.getElementById('storeName').textContent = sname || STORE_ID;
+        } else {
+          document.getElementById('storeName').textContent = '尚未設定店別';
+          document.getElementById('submit').disabled = true;
+          showResult('err', '⚠️', '尚未設定店別', '請聯絡管理者在後台設定你的店別');
+        }
         loadToday();
       } else {
         document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
@@ -117,7 +126,6 @@
     }).catch(function (e) { showResult('err', '❌', '載入錯誤', String(e)); });
   }
 
-  // ====== 今日打卡記錄 ======
   function loadToday() {
     api('today', { idToken: ID_TOKEN }).then(function (data) {
       if (!data.ok) return;
@@ -166,21 +174,19 @@
 
   document.getElementById('submit').onclick = async function () {
     const btn = this;
-    const store = document.getElementById('store');
-    if (!store.value) return showResult('err', '❌', '請選擇店別', '');
-    localStorage.setItem(LS_STORE, store.value);
+    if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
     btn.disabled = true;
     showResult('info', '📍', '定位中…請稍候', '');
     try {
       const pos = await getPosition();
       const ip = await getClientIp();
       const res = await api('punch', {
-        idToken: ID_TOKEN, store_id: store.value, type: PUNCH_TYPE,
+        idToken: ID_TOKEN, store_id: STORE_ID, type: PUNCH_TYPE,
         lat: pos.lat, lng: pos.lng, accuracy: Math.round(pos.accuracy),
         client_ip: ip, user_agent: navigator.userAgent
       });
       btn.disabled = false;
-      var storeName = store.options[store.selectedIndex].text;
+      var storeName = document.getElementById('storeName').textContent;
       if (res.ok) {
         showResult('ok', '✅', PUNCH_TYPE + '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
         loadToday();
