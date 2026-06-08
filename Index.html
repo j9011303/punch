@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>門市打卡</title>
+  
+  <!-- 預連接到外部資源（DNS + TCP 連接提前建立） -->
+  <link rel="preconnect" href="https://static.line-scdn.net">
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="dns-prefetch" href="https://api.ipify.org">
+  
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -42,7 +48,7 @@
     .hint { font-size: 12px; color: #b69a80; margin-top: 16px; text-align: center; }
     #app { display: none; }
   </style>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script async src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -65,12 +71,14 @@
     </div>
   </div>
 
-<script>
-  const LIFF_ID = '2010314288-Vh9dMEyC';
+const LIFF_ID = '2010314288-Vh9dMEyC';
   const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzGcQLml4LSMtGpCk14P7QT6Hn2eA4Mz0s-REha5O9IBXoUvgoxQIqnANsFOso7XRy6/exec';
   let ID_TOKEN = '';
   let PUNCH_TYPE = '打卡';
   let STORE_ID = '';
+  let CACHED_POS = null;
+  let CACHED_IP = ''; // 新增：用來預先存放 IP
+
   async function api(action, params) {
     const res = await fetch(EXEC_URL, {
       method: 'POST',
@@ -79,6 +87,31 @@
     });
     return await res.json();
   }
+
+  // 📍 1. 頁面初始化時就開始定位
+  function startLocationTracking() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.watchPosition(
+      function (p) {
+        CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+      },
+      null,
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 3000 }
+    );
+  }
+
+  // 🌐 2. 頁面初始化時就開始抓 IP (不阻塞主流程)
+  function preloadClientIp() {
+    fetch('https://api.ipify.org?format=json')
+      .then(r => r.json())
+      .then(data => { CACHED_IP = data.ip; })
+      .catch(() => { CACHED_IP = ''; });
+  }
+
+  // 初始化：並行啟動各種背景任務
+  preloadClientIp();
+  startLocationTracking();
+
   liff.init({ liffId: LIFF_ID }).then(function () {
     if (!liff.isLoggedIn()) { liff.login(); return; }
     ID_TOKEN = liff.getIDToken();
@@ -88,20 +121,30 @@
     document.getElementById('app').style.display = 'block';
     showResult('err', '❌', 'LINE 初始化失敗', String(e));
   });
-  function loadData() {
+
+  async function loadData() {
     showResult('info', '⏳', '載入中…', '');
-    api('bootstrap', { idToken: ID_TOKEN }).then(function (data) {
+    
+    try {
+      // 🚀 3. 優化：將 bootstrap 和 today 的請求並行發送 (省下 1~2 秒)
+      const [data, todayData] = await Promise.all([
+        api('bootstrap', { idToken: ID_TOKEN }),
+        api('today', { idToken: ID_TOKEN })
+      ]);
+
       if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
       hideResult();
+
       if (data.bound) {
         document.getElementById('punchBox').style.display = 'block';
         document.getElementById('who').textContent = '👤 ' + data.emp.name;
         STORE_ID = data.emp.store_id || '';
-        var sname = data.emp.store_name || '';
+        let sname = data.emp.store_name || '';
+        
         if (!STORE_ID || !sname) {
-          // 後台未設定店別
           (data.stores || []).forEach(function (s) { if (s.store_id === STORE_ID) sname = s.store_name; });
         }
+        
         if (STORE_ID) {
           document.getElementById('storeName').textContent = sname || STORE_ID;
         } else {
@@ -109,33 +152,38 @@
           document.getElementById('submit').disabled = true;
           showResult('err', '⚠️', '尚未設定店別', '請聯絡管理者在後台設定你的店別');
         }
-        loadToday();
+        
+        // 渲染今日紀錄 (使用已經並行拿回來的 todayData)
+        renderTodayData(todayData);
+
       } else {
         document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
         document.getElementById('bindBox').style.display = 'block';
         const bindEmp = document.getElementById('bindEmp');
         (data.employees || []).forEach(function (e) { bindEmp.add(new Option(e.name, e.emp_id)); });
       }
-    }).catch(function (e) { showResult('err', '❌', '載入錯誤', String(e)); });
+    } catch (e) {
+      showResult('err', '❌', '載入錯誤', String(e));
+    }
   }
-  function loadToday() {
-        const box = document.getElementById('today');
-        box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 載入中...</div>';
-        box.style.display = 'block';
-    api('today', { idToken: ID_TOKEN }).then(function (data) {
-      if (!data.ok) return;
-      var html = '<h3>📋 今日打卡記錄（' + (data.date || '') + '）</h3>';
-      if (!data.punches || data.punches.length === 0) {
-        html += '<div class="empty">今天還沒有打卡記錄</div>';
-      } else {
-        data.punches.forEach(function (p) {
-          html += '<div class="row"><span>' + p.type + '</span><span class="t">' + p.time + '</span></div>';
-        });
-      }
-      box.innerHTML = html;
-      box.style.display = 'block';
-    }).catch(function () {});
+
+  // 抽出渲染打卡紀錄的邏輯
+  function renderTodayData(data) {
+    const box = document.getElementById('today');
+    if (!data || !data.ok) return;
+    
+    let html = '<h3>📋 今日打卡記錄（' + (data.date || '') + '）</h3>';
+    if (!data.punches || data.punches.length === 0) {
+      html += '<div class="empty">今天還沒有打卡記錄</div>';
+    } else {
+      data.punches.forEach(function (p) {
+        html += '<div class="row"><span>' + p.type + '</span><span class="t">' + p.time + '</span></div>';
+      });
+    }
+    box.innerHTML = html;
+    box.style.display = 'block';
   }
+
   document.getElementById('bindBtn').onclick = function () {
     const sel = document.getElementById('bindEmp');
     if (!sel.value) return showResult('err', '❌', '請選擇你的名字', '');
@@ -146,58 +194,65 @@
       else { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定失敗', res.reason || ''); }
     }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
   };
+
   function getPosition() {
     return new Promise(function (resolve, reject) {
+      if (CACHED_POS) return resolve(CACHED_POS);
       if (!navigator.geolocation) return reject(new Error('此裝置不支援定位'));
+      
       navigator.geolocation.getCurrentPosition(
-        function (p) { resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }); },
+        function (p) { 
+          const pos = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+          CACHED_POS = pos;
+          resolve(pos);
+        },
         function (err) { reject(new Error(err.code === 1 ? '請允許定位權限後重試' : '無法取得定位，請重試')); },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        { enableHighAccuracy: false, timeout: 3000, maximumAge: 5000 }
       );
     });
   }
-  async function getClientIp() {
-    try { const r = await fetch('https://api.ipify.org?format=json'); return (await r.json()).ip; } catch (e) { return ''; }
-  }
+
   document.getElementById('submit').onclick = async function () {
     const btn = this;
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
     btn.disabled = true;
-    showResult('info', '📍', '定位中…請稍候', '');
-    // 預先顯示今日打卡紀錄載入中
-    const box = document.getElementById('today');
-    box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 載入中...</div>';
-    box.style.display = 'block';
+    showResult('info', '📍', '處理中…請稍候', ''); // 將文字改為處理中，因為定位通常已快取
     
     try {
-      // 方案1：並行執行 getPosition 和 getClientIp
-      const [pos, ip] = await Promise.all([
-        getPosition(),
-        getClientIp()
-      ]);
+      const pos = CACHED_POS || await getPosition();
+      // 🚀 4. 直接使用快取的 IP，不必再發送 API 苦等
+      const ip = CACHED_IP; 
       
       const res = await api('punch', {
         idToken: ID_TOKEN, store_id: STORE_ID, type: PUNCH_TYPE,
         lat: pos.lat, lng: pos.lng, accuracy: Math.round(pos.accuracy),
         client_ip: ip, user_agent: navigator.userAgent
       });
+      
       btn.disabled = false;
-      var storeName = document.getElementById('storeName').textContent;
+      const storeName = document.getElementById('storeName').textContent;
+      
       if (res.ok) {
         showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
-        loadToday();
+        
+        // 🚀 5. 建議優化：前端直接把這筆紀錄塞進去，取代再次呼叫 loadToday() (這裡示範發送背景請求，不卡 UI)
+        // 背景偷偷更新，讓使用者感覺瞬間完成
+        api('today', { idToken: ID_TOKEN }).then(renderTodayData);
+        
       } else {
         showResult('err', '❌', '打卡失敗', res.reason || '');
       }
     } catch (e) { btn.disabled = false; showResult('err', '❌', '打卡失敗', e.message || String(e)); }
   };
+
   function showResult(type, icon, title, detail) {
     const r = document.getElementById('result');
     r.className = 'result ' + type;
     r.innerHTML = '<div class="icon">' + icon + '</div><div class="title">' + title + '</div>' +
                   (detail ? '<div class="detail">' + detail + '</div>' : '');
   }
-  function hideResult() { document.getElementById('result').className = 'result'; }
+
+  function hideResult() { document.getElementById('result').className = 'result'; }t.getElementById('result').className = 'result'; }
 </script>
 </body>
 </html>
