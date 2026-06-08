@@ -85,7 +85,7 @@
     return await res.json();
   }
   
-  // 📍 頁面初始化時就開始定位
+  // 📍 優化：更激進的超時設置
   function startLocationTracking() {
     if (!navigator.geolocation) return;
     navigator.geolocation.watchPosition(
@@ -93,7 +93,7 @@
         CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
       },
       null,
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 3000 }
+      { enableHighAccuracy: false, timeout: 2000, maximumAge: 0 }
     );
   }
   
@@ -123,7 +123,6 @@
     showResult('info', '⏳', '載入中…', '');
     
     try {
-      // 🔥 只要呼叫 bootstrap 就好，後端已經會順便帶回 today 的資料了！
       const data = await api('bootstrap', { idToken: ID_TOKEN });
       
       if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
@@ -147,7 +146,6 @@
           showResult('err', '⚠️', '尚未設定店別', '請聯絡管理者在後台設定你的店別');
         }
         
-        // 🚀 直接用 bootstrap 帶回來的資料渲染今日紀錄
         renderTodayData(data);
       } else {
         document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
@@ -199,7 +197,7 @@
           resolve(pos);
         },
         function (err) { reject(new Error(err.code === 1 ? '請允許定位權限後重試' : '無法取得定位，請重試')); },
-        { enableHighAccuracy: false, timeout: 3000, maximumAge: 5000 }
+        { enableHighAccuracy: false, timeout: 1000, maximumAge: 0 }
       );
     });
   }
@@ -229,13 +227,9 @@
       
       if (res.ok) {
         showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
-        
-        // 🚀 零延遲更新：直接拿 punch 回傳的最新紀錄資料渲染，不需再打一次 API！
         renderTodayData(res);
-        
       } else {
         showResult('err', '❌', '打卡失敗', res.reason || '');
-        // 若失敗則恢復舊資料畫面，避免卡在載入中
         api('today', { idToken: ID_TOKEN }).then(renderTodayData);
       }
     } catch (e) { 
