@@ -131,6 +131,7 @@
       var html = '<h3>📋 今日打卡記錄（' + (data.date || '') + '）</h3>';
       if (!data.punches || data.punches.length === 0) {
         html += '<div class="empty">今天還沒有打卡記錄</div>';
+      } else {
         data.punches.forEach(function (p) {
           html += '<div class="row"><span>' + p.type + '</span><span class="t">' + p.time + '</span></div>';
         });
