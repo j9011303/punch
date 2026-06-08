@@ -85,6 +85,14 @@
     return await res.json();
   }
   
+  // 🔥 判定是否連到 WiFi
+  function isConnectedToWiFi() {
+    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (!connection) return true; // 無法偵測時假設有 WiFi（不阻擋打卡）
+    const type = connection.type;
+    return type === 'wifi' || type === 'ethernet' || type === 'other';
+  }
+  
   // 🚀 頁面一打開就立即抓定位（超時 1000ms）
   function getPositionImmediately() {
     if (!navigator.geolocation) return;
@@ -206,7 +214,7 @@
     }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
   };
   
-  // 🔥 打卡時：如果有快取位置直接用，沒有就等最多 500ms
+  // 🔥 改進：先判定 WiFi，決定是否需要定位
   document.getElementById('submit').onclick = async function () {
     const btn = this;
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
@@ -218,21 +226,28 @@
     box.style.display = 'block';
     
     try {
-      // 如果已經有定位就直接用，沒有就等 500ms
       let pos = CACHED_POS;
-      if (!pos) {
-        try {
-          pos = await Promise.race([
-            new Promise((resolve, reject) => {
-              navigator.geolocation.getCurrentPosition(
-                function (p) { resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }); },
-                reject,
-                { enableHighAccuracy: false, timeout: 500, maximumAge: 0 }
-              );
-            })
-          ]);
-        } catch (e) {
-          // 定位失敗也繼續打卡（用預設值）
+      
+      // 檢查 WiFi：沒有 WiFi 才強制抓定位
+      if (!isConnectedToWiFi()) {
+        if (!pos) {
+          try {
+            pos = await Promise.race([
+              new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(
+                  function (p) { resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }); },
+                  reject,
+                  { enableHighAccuracy: false, timeout: 500, maximumAge: 0 }
+                );
+              })
+            ]);
+          } catch (e) {
+            pos = { lat: 0, lng: 0, accuracy: 0 };
+          }
+        }
+      } else {
+        // 有 WiFi 時，定位非必需（有就用，沒有用預設值）
+        if (!pos) {
           pos = { lat: 0, lng: 0, accuracy: 0 };
         }
       }
