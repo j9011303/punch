@@ -75,6 +75,7 @@
   let STORE_ID = '';
   let CACHED_POS = null;
   let CACHED_IP = '';
+  let CACHED_WIFI = false;  // 🔥 快取 WiFi 狀態
   
   async function api(action, params) {
     const res = await fetch(EXEC_URL, {
@@ -85,16 +86,15 @@
     return await res.json();
   }
   
-  // 🔥 判定是否連到 WiFi
   function isConnectedToWiFi() {
     const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    if (!connection) return true; // 無法偵測時假設有 WiFi（不阻擋打卡）
+    if (!connection) return true;
     const type = connection.type;
     return type === 'wifi' || type === 'ethernet' || type === 'other';
   }
   
-  // 🚀 頁面一打開就立即抓定位（超時 1000ms）
-  function getPositionImmediately() {
+  // ⚡ 加急定位（沒 WiFi 時使用，超時 1000ms）
+  function getPositionUrgent() {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       function (p) {
@@ -105,15 +105,27 @@
     );
   }
   
-  // 🌐 頁面初始化時抓 IP
+  // 後台定位（有 WiFi 時使用，超時 500ms）
+  function getPositionBackground() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      function (p) {
+        CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+      },
+      null,
+      { enableHighAccuracy: false, timeout: 500, maximumAge: 0 }
+    );
+  }
+  
   function preloadClientIp() {
-    fetch('https://api.ipify.org?format=json')
-      .then(r => r.json())
+    Promise.race([
+      fetch('https://api.ipify.org?format=json').then(r => r.json()),
+      new Promise((_, reject) => setTimeout(() => reject(), 2000))
+    ])
       .then(data => { CACHED_IP = data.ip; })
       .catch(() => { CACHED_IP = ''; });
   }
   
-  // 🚀 立即顯示快取資料（如果有的話）
   function showCachedData() {
     const cached = localStorage.getItem('punchCache');
     if (!cached) return;
@@ -127,14 +139,22 @@
         STORE_ID = data.emp.store_id || '';
         document.getElementById('storeName').textContent = data.emp.store_name || STORE_ID;
         renderTodayData(data);
-        hideResult();
       }
     } catch (e) {}
   }
   
-  // 啟動背景任務
+  // 🔥 頁面加載時立即判定 WiFi 並準備定位
   showCachedData();
-  getPositionImmediately();
+  CACHED_WIFI = isConnectedToWiFi();
+  
+  if (!CACHED_WIFI) {
+    // 沒 WiFi → 加急抓定位（可能 1 秒內）
+    getPositionUrgent();
+  } else {
+    // 有 WiFi → 後台抓定位（備選用）
+    getPositionBackground();
+  }
+  
   preloadClientIp();
   
   liff.init({ liffId: LIFF_ID }).then(function () {
@@ -154,7 +174,6 @@
       const data = await api('bootstrap', { idToken: ID_TOKEN });
       
       if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
-      hideResult();
       
       if (data.bound) {
         document.getElementById('punchBox').style.display = 'block';
@@ -182,6 +201,8 @@
         const bindEmp = document.getElementById('bindEmp');
         (data.employees || []).forEach(function (e) { bindEmp.add(new Option(e.name, e.emp_id)); });
       }
+      
+      hideResult();
     } catch (e) {
       showResult('err', '❌', '載入錯誤', String(e));
     }
@@ -214,7 +235,7 @@
     }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
   };
   
-  // 🔥 改進：先判定 WiFi，決定是否需要定位
+  // 🔥 打卡優化：0 判定時間，直接發送
   document.getElementById('submit').onclick = async function () {
     const btn = this;
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
@@ -226,28 +247,19 @@
     box.style.display = 'block';
     
     try {
-      let pos = CACHED_POS;
+      // 🔥 直接用已經準備好的定位和 WiFi 狀態（0 等待）
+      let pos = CACHED_POS || { lat: 0, lng: 0, accuracy: 0 };
       
-      // 檢查 WiFi：沒有 WiFi 才強制抓定位
-      if (!isConnectedToWiFi()) {
-        if (!pos) {
-          try {
-            pos = await Promise.race([
-              new Promise((resolve, reject) => {
-                navigator.geolocation.getCurrentPosition(
-                  function (p) { resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }); },
-                  reject,
-                  { enableHighAccuracy: false, timeout: 500, maximumAge: 0 }
-                );
-              })
-            ]);
-          } catch (e) {
-            pos = { lat: 0, lng: 0, accuracy: 0 };
-          }
-        }
-      } else {
-        // 有 WiFi 時，定位非必需（有就用，沒有用預設值）
-        if (!pos) {
+      // 如果沒 WiFi 且定位還沒準備好，再等 300ms
+      if (!CACHED_WIFI && !CACHED_POS) {
+        try {
+          pos = await Promise.race([
+            new Promise((resolve, reject) => {
+              if (CACHED_POS) resolve(CACHED_POS);
+              else setTimeout(() => reject(), 300);  // 最多再等 300ms
+            })
+          ]);
+        } catch (e) {
           pos = { lat: 0, lng: 0, accuracy: 0 };
         }
       }
