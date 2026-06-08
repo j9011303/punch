@@ -171,6 +171,11 @@
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
     btn.disabled = true;
     showResult('info', '📍', '定位中…請稍候', '');
+    // 預先顯示今日打卡紀錄載入中
+    const box = document.getElementById('today');
+    box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 載入中...</div>';
+    box.style.display = 'block';
+    
     try {
       const pos = await getPosition();
       const ip = await getClientIp();
