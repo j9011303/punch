@@ -71,7 +71,6 @@
   let ID_TOKEN = '';
   let PUNCH_TYPE = '打卡';
   let STORE_ID = '';
-
   async function api(action, params) {
     const res = await fetch(EXEC_URL, {
       method: 'POST',
@@ -80,7 +79,6 @@
     });
     return await res.json();
   }
-
   liff.init({ liffId: LIFF_ID }).then(function () {
     if (!liff.isLoggedIn()) { liff.login(); return; }
     ID_TOKEN = liff.getIDToken();
@@ -90,7 +88,6 @@
     document.getElementById('app').style.display = 'block';
     showResult('err', '❌', 'LINE 初始化失敗', String(e));
   });
-
   function loadData() {
     showResult('info', '⏳', '載入中…', '');
     api('bootstrap', { idToken: ID_TOKEN }).then(function (data) {
@@ -121,7 +118,6 @@
       }
     }).catch(function (e) { showResult('err', '❌', '載入錯誤', String(e)); });
   }
-
   function loadToday() {
         const box = document.getElementById('today');
         box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 載入中...</div>';
@@ -140,7 +136,6 @@
       box.style.display = 'block';
     }).catch(function () {});
   }
-
   document.getElementById('bindBtn').onclick = function () {
     const sel = document.getElementById('bindEmp');
     if (!sel.value) return showResult('err', '❌', '請選擇你的名字', '');
@@ -151,22 +146,19 @@
       else { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定失敗', res.reason || ''); }
     }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
   };
-
-
   function getPosition() {
     return new Promise(function (resolve, reject) {
       if (!navigator.geolocation) return reject(new Error('此裝置不支援定位'));
       navigator.geolocation.getCurrentPosition(
         function (p) { resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }); },
         function (err) { reject(new Error(err.code === 1 ? '請允許定位權限後重試' : '無法取得定位，請重試')); },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     });
   }
   async function getClientIp() {
     try { const r = await fetch('https://api.ipify.org?format=json'); return (await r.json()).ip; } catch (e) { return ''; }
   }
-
   document.getElementById('submit').onclick = async function () {
     const btn = this;
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
@@ -178,8 +170,12 @@
     box.style.display = 'block';
     
     try {
-      const pos = await getPosition();
-      const ip = await getClientIp();
+      // 方案1：並行執行 getPosition 和 getClientIp
+      const [pos, ip] = await Promise.all([
+        getPosition(),
+        getClientIp()
+      ]);
+      
       const res = await api('punch', {
         idToken: ID_TOKEN, store_id: STORE_ID, type: PUNCH_TYPE,
         lat: pos.lat, lng: pos.lng, accuracy: Math.round(pos.accuracy),
@@ -195,7 +191,6 @@
       }
     } catch (e) { btn.disabled = false; showResult('err', '❌', '打卡失敗', e.message || String(e)); }
   };
-
   function showResult(type, icon, title, detail) {
     const r = document.getElementById('result');
     r.className = 'result ' + type;
