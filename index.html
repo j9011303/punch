@@ -4,6 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>門市打卡</title>
+  
+  <!-- 預連接到外部資源 -->
+  <link rel="preconnect" href="https://static.line-scdn.net">
+  <link rel="preconnect" href="https://script.google.com">
+  <link rel="dns-prefetch" href="https://api.ipify.org">
+  
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -39,7 +45,7 @@
     .hint { font-size: 12px; color: #b69a80; margin-top: 16px; text-align: center; }
     #app { display: none; }
   </style>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script async src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 </head>
 <body>
   <div class="wrap">
