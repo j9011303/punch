@@ -57,10 +57,6 @@
       <div id="punchBox" style="display:none">
         <label>店別</label>
         <div class="storebox" id="storeName">—</div>
-        <div class="types">
-          <button id="btnIn" class="on" data-type="上班">上班</button>
-          <button id="btnOut" data-type="下班">下班</button>
-        </div>
         <button id="submit" class="submit">打卡</button>
       </div>
       <div id="result" class="result"></div>
@@ -73,7 +69,7 @@
   const LIFF_ID = '2010314288-Vh9dMEyC';
   const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzGcQLml4LSMtGpCk14P7QT6Hn2eA4Mz0s-REha5O9IBXoUvgoxQIqnANsFOso7XRy6/exec';
   let ID_TOKEN = '';
-  let PUNCH_TYPE = '上班';
+  let PUNCH_TYPE = '打卡';
   let STORE_ID = '';
 
   async function api(action, params) {
@@ -154,9 +150,6 @@
     }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
   };
 
-  document.getElementById('btnIn').onclick = function () { setType('上班', this); };
-  document.getElementById('btnOut').onclick = function () { setType('下班', this); };
-  function setType(t, btn) { PUNCH_TYPE = t; document.querySelectorAll('.types button').forEach(function (b) { b.classList.remove('on'); }); btn.classList.add('on'); }
 
   function getPosition() {
     return new Promise(function (resolve, reject) {
@@ -188,10 +181,10 @@
       btn.disabled = false;
       var storeName = document.getElementById('storeName').textContent;
       if (res.ok) {
-        showResult('ok', '✅', PUNCH_TYPE + '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
+        showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
         loadToday();
       } else {
-        showResult('err', '❌', PUNCH_TYPE + '打卡失敗', res.reason || '');
+        showResult('err', '❌', '打卡失敗', res.reason || '');
       }
     } catch (e) { btn.disabled = false; showResult('err', '❌', '打卡失敗', e.message || String(e)); }
   };
