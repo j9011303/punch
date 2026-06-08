@@ -1,4 +1,3 @@
-<!--liff/edge-->
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -6,13 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>門市打卡</title>
   
-  <!-- 預連接到外部資源 -->
- 
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    
-    <link rel="preconnect" href="https://static.line-scdn.net">
+  <link rel="preconnect" href="https://static.line-scdn.net">
   <link rel="preconnect" href="https://script.google.com">
   <link rel="dns-prefetch" href="https://api.ipify.org">
+  
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   
   <style>
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -88,7 +85,7 @@
     return await res.json();
   }
   
-  // 📍 1. 頁面初始化時就開始定位
+  // 📍 頁面初始化時就開始定位
   function startLocationTracking() {
     if (!navigator.geolocation) return;
     navigator.geolocation.watchPosition(
@@ -100,7 +97,7 @@
     );
   }
   
-  // 🌐 2. 頁面初始化時就開始抓 IP
+  // 🌐 頁面初始化時抓 IP
   function preloadClientIp() {
     fetch('https://api.ipify.org?format=json')
       .then(r => r.json())
@@ -108,7 +105,7 @@
       .catch(() => { CACHED_IP = ''; });
   }
   
-  // 初始化：並行啟動各種背景任務
+  // 啟動背景任務
   preloadClientIp();
   startLocationTracking();
   
@@ -126,11 +123,8 @@
     showResult('info', '⏳', '載入中…', '');
     
     try {
-      // 🚀 3. 並行發送 bootstrap 和 today 請求
-      const [data, todayData] = await Promise.all([
-        api('bootstrap', { idToken: ID_TOKEN }),
-        api('today', { idToken: ID_TOKEN })
-      ]);
+      // 🔥 只要呼叫 bootstrap 就好，後端已經會順便帶回 today 的資料了！
+      const data = await api('bootstrap', { idToken: ID_TOKEN });
       
       if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
       hideResult();
@@ -153,8 +147,8 @@
           showResult('err', '⚠️', '尚未設定店別', '請聯絡管理者在後台設定你的店別');
         }
         
-        // 渲染今日紀錄
-        renderTodayData(todayData);
+        // 🚀 直接用 bootstrap 帶回來的資料渲染今日紀錄
+        renderTodayData(data);
       } else {
         document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
         document.getElementById('bindBox').style.display = 'block';
@@ -166,7 +160,6 @@
     }
   }
   
-  // 抽出渲染打卡紀錄的邏輯
   function renderTodayData(data) {
     const box = document.getElementById('today');
     if (!data || !data.ok) return;
@@ -237,11 +230,13 @@
       if (res.ok) {
         showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
         
-        // 🚀 4. 背景更新，不卡 UI
-        api('today', { idToken: ID_TOKEN }).then(renderTodayData);
+        // 🚀 零延遲更新：直接拿 punch 回傳的最新紀錄資料渲染，不需再打一次 API！
+        renderTodayData(res);
         
       } else {
         showResult('err', '❌', '打卡失敗', res.reason || '');
+        // 若失敗則恢復舊資料畫面，避免卡在載入中
+        api('today', { idToken: ID_TOKEN }).then(renderTodayData);
       }
     } catch (e) { 
       btn.disabled = false; 
