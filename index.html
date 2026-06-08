@@ -85,15 +85,15 @@
     return await res.json();
   }
   
-  // 📍 優化：更激進的超時設置
-  function startLocationTracking() {
+  // 🚀 頁面一打開就立即抓定位（超時 1000ms）
+  function getPositionImmediately() {
     if (!navigator.geolocation) return;
-    navigator.geolocation.watchPosition(
+    navigator.geolocation.getCurrentPosition(
       function (p) {
         CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
       },
       null,
-      { enableHighAccuracy: false, timeout: 2000, maximumAge: 0 }
+      { enableHighAccuracy: false, timeout: 1000, maximumAge: 0 }
     );
   }
   
@@ -126,8 +126,8 @@
   
   // 啟動背景任務
   showCachedData();
+  getPositionImmediately();
   preloadClientIp();
-  startLocationTracking();
   
   liff.init({ liffId: LIFF_ID }).then(function () {
     if (!liff.isLoggedIn()) { liff.login(); return; }
@@ -167,7 +167,6 @@
         }
         
         renderTodayData(data);
-        // 💾 快取最新資料
         localStorage.setItem('punchCache', JSON.stringify(data));
       } else {
         document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
@@ -207,35 +206,37 @@
     }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
   };
   
-  function getPosition() {
-    return new Promise(function (resolve, reject) {
-      if (CACHED_POS) return resolve(CACHED_POS);
-      if (!navigator.geolocation) return reject(new Error('此裝置不支援定位'));
-      
-      navigator.geolocation.getCurrentPosition(
-        function (p) { 
-          const pos = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
-          CACHED_POS = pos;
-          resolve(pos);
-        },
-        function (err) { reject(new Error(err.code === 1 ? '請允許定位權限後重試' : '無法取得定位，請重試')); },
-        { enableHighAccuracy: false, timeout: 1000, maximumAge: 0 }
-      );
-    });
-  }
-  
+  // 🔥 打卡時：如果有快取位置直接用，沒有就等最多 500ms
   document.getElementById('submit').onclick = async function () {
     const btn = this;
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
     btn.disabled = true;
-    showResult('info', '📍', '處理中…請稍候', '');
+    showResult('info', '📍', '打卡中…', '');
     
     const box = document.getElementById('today');
-    box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 載入中...</div>';
+    box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 更新中...</div>';
     box.style.display = 'block';
     
     try {
-      const pos = CACHED_POS || await getPosition();
+      // 如果已經有定位就直接用，沒有就等 500ms
+      let pos = CACHED_POS;
+      if (!pos) {
+        try {
+          pos = await Promise.race([
+            new Promise((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(
+                function (p) { resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }); },
+                reject,
+                { enableHighAccuracy: false, timeout: 500, maximumAge: 0 }
+              );
+            })
+          ]);
+        } catch (e) {
+          // 定位失敗也繼續打卡（用預設值）
+          pos = { lat: 0, lng: 0, accuracy: 0 };
+        }
+      }
+      
       const ip = CACHED_IP;
       
       const res = await api('punch', {
@@ -255,9 +256,9 @@
         showResult('err', '❌', '打卡失敗', res.reason || '');
         api('today', { idToken: ID_TOKEN }).then(renderTodayData);
       }
-    } catch (e) { 
-      btn.disabled = false; 
-      showResult('err', '❌', '打卡失敗', e.message || String(e)); 
+    } catch (e) {
+      btn.disabled = false;
+      showResult('err', '❌', '打卡失敗', e.message || String(e));
     }
   };
   
@@ -268,8 +269,8 @@
                   (detail ? '<div class="detail">' + detail + '</div>' : '');
   }
   
-  function hideResult() { 
-    document.getElementById('result').className = 'result'; 
+  function hideResult() {
+    document.getElementById('result').className = 'result';
   }
 </script>
 </body>
