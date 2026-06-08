@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>門市打卡</title>
   
-  <!-- 預連接到外部資源（DNS + TCP 連接提前建立） -->
+  <!-- 預連接到外部資源 -->
   <link rel="preconnect" href="https://static.line-scdn.net">
   <link rel="preconnect" href="https://script.google.com">
   <link rel="dns-prefetch" href="https://api.ipify.org">
@@ -21,9 +21,6 @@
     label { display: block; font-size: 13px; color: #9a7a5e; margin: 16px 0 6px; font-weight: 600; }
     select { width: 100%; padding: 13px; font-size: 16px; border: 1.5px solid #e7cfb2; border-radius: 12px; background: #fffdfa; color: #4a3a2e; }
     .storebox { padding: 16px; font-size: 20px; text-align: center; border: 1.5px solid #e7cfb2; border-radius: 12px; background: #fff3e3; font-weight: 800; color: #c2541d; }
-    .types { display: flex; gap: 10px; margin-top: 18px; }
-    .types button { flex: 1; padding: 15px; font-size: 17px; border: 2px solid #e7cfb2; border-radius: 12px; background: #fffdfa; color: #8a6a4e; font-weight: 600; }
-    .types button.on { border-color: #e07a3f; background: #fdeadd; color: #c2541d; }
     .submit { width: 100%; margin-top: 22px; padding: 17px; font-size: 19px; font-weight: 800; border: none; border-radius: 14px;
               background: linear-gradient(135deg,#ef8a44,#df6a2b); color: #fff; box-shadow: 0 4px 12px rgba(223,106,43,.35); }
     .submit:disabled { background: #e7c4a8; box-shadow: none; }
@@ -70,15 +67,15 @@
       <div class="hint">需開啟定位權限</div>
     </div>
   </div>
-
-const LIFF_ID = '2010314288-Vh9dMEyC';
+<script>
+  const LIFF_ID = '2010314288-Vh9dMEyC';
   const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzGcQLml4LSMtGpCk14P7QT6Hn2eA4Mz0s-REha5O9IBXoUvgoxQIqnANsFOso7XRy6/exec';
   let ID_TOKEN = '';
   let PUNCH_TYPE = '打卡';
   let STORE_ID = '';
   let CACHED_POS = null;
-  let CACHED_IP = ''; // 新增：用來預先存放 IP
-
+  let CACHED_IP = '';
+  
   async function api(action, params) {
     const res = await fetch(EXEC_URL, {
       method: 'POST',
@@ -87,7 +84,7 @@ const LIFF_ID = '2010314288-Vh9dMEyC';
     });
     return await res.json();
   }
-
+  
   // 📍 1. 頁面初始化時就開始定位
   function startLocationTracking() {
     if (!navigator.geolocation) return;
@@ -99,19 +96,19 @@ const LIFF_ID = '2010314288-Vh9dMEyC';
       { enableHighAccuracy: false, timeout: 5000, maximumAge: 3000 }
     );
   }
-
-  // 🌐 2. 頁面初始化時就開始抓 IP (不阻塞主流程)
+  
+  // 🌐 2. 頁面初始化時就開始抓 IP
   function preloadClientIp() {
     fetch('https://api.ipify.org?format=json')
       .then(r => r.json())
       .then(data => { CACHED_IP = data.ip; })
       .catch(() => { CACHED_IP = ''; });
   }
-
+  
   // 初始化：並行啟動各種背景任務
   preloadClientIp();
   startLocationTracking();
-
+  
   liff.init({ liffId: LIFF_ID }).then(function () {
     if (!liff.isLoggedIn()) { liff.login(); return; }
     ID_TOKEN = liff.getIDToken();
@@ -121,20 +118,20 @@ const LIFF_ID = '2010314288-Vh9dMEyC';
     document.getElementById('app').style.display = 'block';
     showResult('err', '❌', 'LINE 初始化失敗', String(e));
   });
-
+  
   async function loadData() {
     showResult('info', '⏳', '載入中…', '');
     
     try {
-      // 🚀 3. 優化：將 bootstrap 和 today 的請求並行發送 (省下 1~2 秒)
+      // 🚀 3. 並行發送 bootstrap 和 today 請求
       const [data, todayData] = await Promise.all([
         api('bootstrap', { idToken: ID_TOKEN }),
         api('today', { idToken: ID_TOKEN })
       ]);
-
+      
       if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
       hideResult();
-
+      
       if (data.bound) {
         document.getElementById('punchBox').style.display = 'block';
         document.getElementById('who').textContent = '👤 ' + data.emp.name;
@@ -153,9 +150,8 @@ const LIFF_ID = '2010314288-Vh9dMEyC';
           showResult('err', '⚠️', '尚未設定店別', '請聯絡管理者在後台設定你的店別');
         }
         
-        // 渲染今日紀錄 (使用已經並行拿回來的 todayData)
+        // 渲染今日紀錄
         renderTodayData(todayData);
-
       } else {
         document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
         document.getElementById('bindBox').style.display = 'block';
@@ -166,7 +162,7 @@ const LIFF_ID = '2010314288-Vh9dMEyC';
       showResult('err', '❌', '載入錯誤', String(e));
     }
   }
-
+  
   // 抽出渲染打卡紀錄的邏輯
   function renderTodayData(data) {
     const box = document.getElementById('today');
@@ -183,7 +179,7 @@ const LIFF_ID = '2010314288-Vh9dMEyC';
     box.innerHTML = html;
     box.style.display = 'block';
   }
-
+  
   document.getElementById('bindBtn').onclick = function () {
     const sel = document.getElementById('bindEmp');
     if (!sel.value) return showResult('err', '❌', '請選擇你的名字', '');
@@ -194,7 +190,7 @@ const LIFF_ID = '2010314288-Vh9dMEyC';
       else { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定失敗', res.reason || ''); }
     }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
   };
-
+  
   function getPosition() {
     return new Promise(function (resolve, reject) {
       if (CACHED_POS) return resolve(CACHED_POS);
@@ -211,17 +207,20 @@ const LIFF_ID = '2010314288-Vh9dMEyC';
       );
     });
   }
-
+  
   document.getElementById('submit').onclick = async function () {
     const btn = this;
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
     btn.disabled = true;
-    showResult('info', '📍', '處理中…請稍候', ''); // 將文字改為處理中，因為定位通常已快取
+    showResult('info', '📍', '處理中…請稍候', '');
+    
+    const box = document.getElementById('today');
+    box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 載入中...</div>';
+    box.style.display = 'block';
     
     try {
       const pos = CACHED_POS || await getPosition();
-      // 🚀 4. 直接使用快取的 IP，不必再發送 API 苦等
-      const ip = CACHED_IP; 
+      const ip = CACHED_IP;
       
       const res = await api('punch', {
         idToken: ID_TOKEN, store_id: STORE_ID, type: PUNCH_TYPE,
@@ -235,24 +234,28 @@ const LIFF_ID = '2010314288-Vh9dMEyC';
       if (res.ok) {
         showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
         
-        // 🚀 5. 建議優化：前端直接把這筆紀錄塞進去，取代再次呼叫 loadToday() (這裡示範發送背景請求，不卡 UI)
-        // 背景偷偷更新，讓使用者感覺瞬間完成
+        // 🚀 4. 背景更新，不卡 UI
         api('today', { idToken: ID_TOKEN }).then(renderTodayData);
         
       } else {
         showResult('err', '❌', '打卡失敗', res.reason || '');
       }
-    } catch (e) { btn.disabled = false; showResult('err', '❌', '打卡失敗', e.message || String(e)); }
+    } catch (e) { 
+      btn.disabled = false; 
+      showResult('err', '❌', '打卡失敗', e.message || String(e)); 
+    }
   };
-
+  
   function showResult(type, icon, title, detail) {
     const r = document.getElementById('result');
     r.className = 'result ' + type;
     r.innerHTML = '<div class="icon">' + icon + '</div><div class="title">' + title + '</div>' +
                   (detail ? '<div class="detail">' + detail + '</div>' : '');
   }
-
-  function hideResult() { document.getElementById('result').className = 'result'; }t.getElementById('result').className = 'result'; }
+  
+  function hideResult() { 
+    document.getElementById('result').className = 'result'; 
+  }
 </script>
 </body>
 </html>
