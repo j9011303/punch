@@ -105,7 +105,27 @@
       .catch(() => { CACHED_IP = ''; });
   }
   
+  // 🚀 立即顯示快取資料（如果有的話）
+  function showCachedData() {
+    const cached = localStorage.getItem('punchCache');
+    if (!cached) return;
+    
+    try {
+      const data = JSON.parse(cached);
+      if (data.bound) {
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('punchBox').style.display = 'block';
+        document.getElementById('who').textContent = '👤 ' + data.emp.name;
+        STORE_ID = data.emp.store_id || '';
+        document.getElementById('storeName').textContent = data.emp.store_name || STORE_ID;
+        renderTodayData(data);
+        hideResult();
+      }
+    } catch (e) {}
+  }
+  
   // 啟動背景任務
+  showCachedData();
   preloadClientIp();
   startLocationTracking();
   
@@ -147,6 +167,8 @@
         }
         
         renderTodayData(data);
+        // 💾 快取最新資料
+        localStorage.setItem('punchCache', JSON.stringify(data));
       } else {
         document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
         document.getElementById('bindBox').style.display = 'block';
@@ -228,6 +250,7 @@
       if (res.ok) {
         showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
         renderTodayData(res);
+        localStorage.setItem('punchCache', JSON.stringify(res));
       } else {
         showResult('err', '❌', '打卡失敗', res.reason || '');
         api('today', { idToken: ID_TOKEN }).then(renderTodayData);
