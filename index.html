@@ -108,7 +108,7 @@
     navigator.geolocation.watchPosition(
       function (p) { CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }; },
       function (error) { console.log('定位失敗：' + error.message); },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 30000 }
     );
   }
 
@@ -124,7 +124,7 @@
           resolve(pos);
         },
         function () { resolve(null); },
-        { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 3000 }
+        { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 30000 }
       );
     });
   }
