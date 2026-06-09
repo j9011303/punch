@@ -2,6 +2,9 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <meta name="color-scheme" content="light">
   <title>門市打卡</title>
@@ -221,6 +224,10 @@
   </style>
 </head>
 <body>
+  <div id="rescueBtn" style="background:#ffdddd; color:#c00; padding:15px; text-align:center; font-weight:bold; margin:10px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="localStorage.clear(); window.location.href=window.location.href.split('?')[0] + '?v=' + new Date().getTime();">
+    ⚠️ 畫面卡住？點我強制修復
+  </div>
+
   <div id="app">
     <div class="header">
       <h1>🏪 門市打卡系統</h1>
@@ -375,6 +382,7 @@
           (data.employees || []).forEach(function (e) { bindEmp.add(new Option(e.name, e.emp_id)); });
         }
 
+        document.getElementById('rescueBtn').style.display = 'none';
         hideResult();
       } catch (e) {
         showResult('err', '❌', '載入錯誤', String(e));
