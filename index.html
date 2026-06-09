@@ -3,280 +3,478 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="color-scheme" content="light">
   <title>門市打卡</title>
-  
-  <link rel="preconnect" href="https://static.line-scdn.net">
-  <link rel="preconnect" href="https://script.google.com">
-  <link rel="dns-prefetch" href="https://api.ipify.org">
-  
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  
+  <script src="https://liff.line.me/sdk/web/liff.js"></script>
   <style>
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", sans-serif;
-           margin: 0; background: #fbf1e3; color: #4a3a2e; }
-    .wrap { max-width: 480px; margin: 0 auto; padding: 22px 16px 48px; }
-    h1 { font-size: 22px; text-align: center; margin: 10px 0 4px; color: #b8551f; }
-    .who { text-align: center; font-size: 14px; color: #a96a3a; margin-bottom: 18px; min-height: 18px; }
-    .card { background: #fffaf3; border-radius: 16px; padding: 20px; box-shadow: 0 4px 14px rgba(184,85,31,.10); border: 1px solid #f1ddc6; }
-    label { display: block; font-size: 13px; color: #9a7a5e; margin: 16px 0 6px; font-weight: 600; }
-    select { width: 100%; padding: 13px; font-size: 16px; border: 1.5px solid #e7cfb2; border-radius: 12px; background: #fffdfa; color: #4a3a2e; }
-    .storebox { padding: 16px; font-size: 20px; text-align: center; border: 1.5px solid #e7cfb2; border-radius: 12px; background: #fff3e3; font-weight: 800; color: #c2541d; }
-    .submit { width: 100%; margin-top: 22px; padding: 17px; font-size: 19px; font-weight: 800; border: none; border-radius: 14px;
-              background: linear-gradient(135deg,#ef8a44,#df6a2b); color: #fff; box-shadow: 0 4px 12px rgba(223,106,43,.35); }
-    .submit:disabled { background: #e7c4a8; box-shadow: none; }
-    .result { margin-top: 20px; border-radius: 14px; padding: 20px 16px; text-align: center; display: none; }
-    .result .icon { font-size: 46px; line-height: 1; }
-    .result .title { font-size: 22px; font-weight: 800; margin: 8px 0 4px; }
-    .result .detail { font-size: 15px; line-height: 1.6; }
-    .result.ok { background: #eaf7ec; border: 1.5px solid #9ed3a6; display: block; }
-    .result.ok .title { color: #2e7d32; }
-    .result.ok .detail { color: #3a6b3d; }
-    .result.err { background: #fdeae2; border: 1.5px solid #f0b49c; display: block; }
-    .result.err .title { color: #c0432a; }
-    .result.err .detail { color: #a4492f; }
-    .result.info { background: #fdf2e4; border: 1.5px solid #f0d6b0; display: block; }
-    .result.info .title { color: #b5712f; font-size: 17px; }
-    .today { margin-top: 20px; background: #fff6ea; border: 1px solid #f1ddc6; border-radius: 12px; padding: 14px 16px; display: none; }
-    .today h3 { margin: 0 0 10px; font-size: 14px; color: #b8551f; }
-    .today .row { display: flex; justify-content: space-between; font-size: 15px; padding: 5px 0; color: #5a4636; border-bottom: 1px dashed #eeddc8; }
-    .today .row:last-child { border-bottom: none; }
-    .today .t { font-weight: 700; color: #c2541d; }
-    .today .empty { font-size: 14px; color: #b69a80; }
-    .hint { font-size: 12px; color: #b69a80; margin-top: 16px; text-align: center; }
-    #app { display: none; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: #fbf1e3;
+      color: #333;
+      padding: 10px;
+    }
+
+    #app {
+      display: none;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px 12px 0 0;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .header #who {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+
+    .header #storeName {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+
+    .content {
+      background: white;
+      padding: 20px;
+      border-radius: 0 0 12px 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    #result {
+      margin-bottom: 20px;
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+      display: none;
+      background-color: #f0f0f0;
+    }
+
+    #result.ok {
+      display: block;
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    #result.err {
+      display: block;
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    #result.info {
+      display: block;
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .title {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .detail {
+      font-size: 14px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #punchBox {
+      display: none;
+    }
+
+    #submit {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 20px;
+      transition: opacity 0.3s;
+    }
+
+    #submit:active {
+      opacity: 0.8;
+    }
+
+    #submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #today {
+      display: none;
+      background: #f8f9fa;
+      padding: 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+    }
+
+    #today h3 {
+      margin-bottom: 12px;
+      font-size: 16px;
+      color: #333;
+    }
+
+    .empty {
+      text-align: center;
+      color: #999;
+      padding: 12px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #e0e0e0;
+      align-items: center;
+    }
+
+    .row:last-child {
+      border-bottom: none;
+    }
+
+    .row span:first-child {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .row .t {
+      color: #667eea;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    #bindBox {
+      display: none;
+    }
+
+    #bindEmp {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    #bindBtn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #bindBtn:active {
+      opacity: 0.8;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+      }
+
+      #app {
+        margin: 0;
+      }
+
+      .header {
+        border-radius: 0;
+      }
+
+      .content {
+        border-radius: 0;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>🍲 門市打卡</h1>
-    <div id="who" class="who"></div>
-    <div id="app" class="card">
-      <div id="bindBox" style="display:none">
-        <label>首次使用，請選擇你的名字完成綁定</label>
-        <select id="bindEmp"></select>
-        <button id="bindBtn" class="submit">綁定我的 LINE</button>
+  <div id="app">
+    <div class="header">
+      <h1>🏪 門市打卡系統</h1>
+      <div id="who">👤 載入中…</div>
+      <div id="storeName"></div>
+    </div>
+    <div class="content">
+      <div id="result"></div>
+
+      <div id="punchBox">
+        <button id="submit">👊 打卡</button>
+        <div id="today"></div>
       </div>
-      <div id="punchBox" style="display:none">
-        <label>店別</label>
-        <div class="storebox" id="storeName">—</div>
-        <button id="submit" class="submit">打卡</button>
+
+      <div id="bindBox">
+        <h3>👤 請選擇你的名字</h3>
+        <select id="bindEmp">
+          <option value="">-- 選擇員工 --</option>
+        </select>
+        <button id="bindBtn">✅ 綁定 LINE</button>
       </div>
-      <div id="result" class="result"></div>
-      <div id="today" class="today"></div>
-      <div class="hint">需開啟定位權限</div>
     </div>
   </div>
-<script>
-  const LIFF_ID = '2010314288-Vh9dMEyC';
-  const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzGcQLml4LSMtGpCk14P7QT6Hn2eA4Mz0s-REha5O9IBXoUvgoxQIqnANsFOso7XRy6/exec';
-  let ID_TOKEN = '';
-  let PUNCH_TYPE = '打卡';
-  let STORE_ID = '';
-  let CACHED_POS = null;
-  let CACHED_IP = '';
-  
-  async function api(action, params) {
-    const res = await fetch(EXEC_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(Object.assign({ action: action }, params || {}))
-    });
-    return await res.json();
-  }
-  
-  function isConnectedToWiFi() {
-    const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    if (!connection) return true;
-    const type = connection.type;
-    return type === 'wifi' || type === 'ethernet' || type === 'other';
-  }
-  
-  // ✅ 持續追蹤定位（頁面加載就開始，永遠保有最新位置）
-  function startContinuousPositioning() {
-    if (!navigator.geolocation) {
-      console.log('此瀏覽器不支援定位');
-      return;
+
+  <script>
+    const LIFF_ID = '2010314288-Vh9dMEyC';
+    const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzGcQLml4LSMtGpCk14P7QT6Hn2eA4Mz0s-REha5O9IBXoUvgoxQIqnANsFOso7XRy6/exec';
+    let ID_TOKEN = '';
+    let PUNCH_TYPE = '打卡';
+    let STORE_ID = '';
+    let CACHED_POS = null;
+    let CACHED_IP = '';
+    let CACHED_WIFI = false;
+
+    async function api(action, params) {
+      const res = await fetch(EXEC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ action: action }, params || {}))
+      });
+      return await res.json();
     }
-    
-    navigator.geolocation.watchPosition(
-      function (p) {
-        CACHED_POS = { 
-          lat: p.coords.latitude, 
-          lng: p.coords.longitude, 
-          accuracy: p.coords.accuracy 
-        };
-        console.log('✅ 位置已更新：' + CACHED_POS.lat.toFixed(4) + ', ' + CACHED_POS.lng.toFixed(4) + ' (精度: ' + Math.round(CACHED_POS.accuracy) + 'm)');
-      },
-      function (error) {
-        console.log('定位失敗：' + error.message);
-      },
-      { 
-        enableHighAccuracy: false,  // 不需要高精度，省電
-        timeout: 10000, 
-        maximumAge: 5000  // 5 秒內的快取位置可用
-      }
-    );
-  }
-  
-  function preloadClientIp() {
-    Promise.race([
-      fetch('https://api.ipify.org?format=json').then(r => r.json()),
-      new Promise((_, reject) => setTimeout(() => reject(), 2000))
-    ])
-      .then(data => { CACHED_IP = data.ip; console.log('✅ IP 已取得：' + CACHED_IP); })
-      .catch(() => { CACHED_IP = ''; console.log('⚠️ IP 取得失敗'); });
-  }
-  
-  function showCachedData() {
-    const cached = localStorage.getItem('punchCache');
-    if (!cached) return;
-    
-    try {
-      const data = JSON.parse(cached);
-      if (data.bound) {
-        document.getElementById('app').style.display = 'block';
-        document.getElementById('punchBox').style.display = 'block';
-        document.getElementById('who').textContent = '👤 ' + data.emp.name;
-        STORE_ID = data.emp.store_id || '';
-        document.getElementById('storeName').textContent = data.emp.store_name || STORE_ID;
-        renderTodayData(data);
-      }
-    } catch (e) {}
-  }
-  
-  // 🔥 頁面加載時立即開始準備定位、IP 和快取資料
-  showCachedData();
-  startContinuousPositioning();  // ✅ 改成持續追蹤
-  preloadClientIp();
-  
-  liff.init({ liffId: LIFF_ID }).then(function () {
-    if (!liff.isLoggedIn()) { liff.login(); return; }
-    ID_TOKEN = liff.getIDToken();
-    document.getElementById('app').style.display = 'block';
-    loadData();
-  }).catch(function (e) {
-    document.getElementById('app').style.display = 'block';
-    showResult('err', '❌', 'LINE 初始化失敗', String(e));
-  });
-  
-  async function loadData() {
-    showResult('info', '⏳', '載入中…', '');
-    
-    try {
-      const data = await api('bootstrap', { idToken: ID_TOKEN });
-      
-      if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
-      
-      if (data.bound) {
-        document.getElementById('punchBox').style.display = 'block';
-        document.getElementById('who').textContent = '👤 ' + data.emp.name;
-        STORE_ID = data.emp.store_id || '';
-        let sname = data.emp.store_name || '';
-        
-        if (!STORE_ID || !sname) {
-          (data.stores || []).forEach(function (s) { if (s.store_id === STORE_ID) sname = s.store_name; });
-        }
-        
-        if (STORE_ID) {
-          document.getElementById('storeName').textContent = sname || STORE_ID;
-        } else {
-          document.getElementById('storeName').textContent = '尚未設定店別';
-          document.getElementById('submit').disabled = true;
-          showResult('err', '⚠️', '尚未設定店別', '請聯絡管理者在後台設定你的店別');
-        }
-        
-        renderTodayData(data);
-        localStorage.setItem('punchCache', JSON.stringify(data));
-      } else {
-        document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
-        document.getElementById('bindBox').style.display = 'block';
-        const bindEmp = document.getElementById('bindEmp');
-        (data.employees || []).forEach(function (e) { bindEmp.add(new Option(e.name, e.emp_id)); });
-      }
-      
-      hideResult();
-    } catch (e) {
-      showResult('err', '❌', '載入錯誤', String(e));
+
+    function isConnectedToWiFi() {
+      const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+      if (!connection) return true;
+      const type = connection.type;
+      return type === 'wifi' || type === 'ethernet' || type === 'other';
     }
-  }
-  
-  function renderTodayData(data) {
-    const box = document.getElementById('today');
-    if (!data || !data.ok) return;
-    
-    let html = '<h3>📋 今日打卡記錄（' + (data.date || '') + '）</h3>';
-    if (!data.punches || data.punches.length === 0) {
-      html += '<div class="empty">今天還沒有打卡記錄</div>';
+
+    // 🔥 優化 1：把超時時間從 1 秒拉長到 5 秒，給手機一點時間找衛星
+    function getPositionUrgent() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        function (p) {
+          CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+        },
+        null,
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+
+    function getPositionBackground() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        function (p) {
+          CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+        },
+        null,
+        { enableHighAccuracy: false, timeout: 3000, maximumAge: 0 }
+      );
+    }
+
+    function preloadClientIp() {
+      Promise.race([
+        fetch('https://api.ipify.org?format=json').then(r => r.json()),
+        new Promise((_, reject) => setTimeout(() => reject(), 2000))
+      ])
+        .then(data => { CACHED_IP = data.ip; })
+        .catch(() => { CACHED_IP = ''; });
+    }
+
+    function showCachedData() {
+      const cached = localStorage.getItem('punchCache');
+      if (!cached) return;
+
+      try {
+        const data = JSON.parse(cached);
+        if (data.bound) {
+          document.getElementById('app').style.display = 'block';
+          document.getElementById('punchBox').style.display = 'block';
+          document.getElementById('who').textContent = '👤 ' + data.emp.name;
+          STORE_ID = data.emp.store_id || '';
+          document.getElementById('storeName').textContent = data.emp.store_name || STORE_ID;
+          renderTodayData(data);
+        }
+      } catch (e) {}
+    }
+
+    showCachedData();
+    CACHED_WIFI = isConnectedToWiFi();
+
+    if (!CACHED_WIFI) {
+      getPositionUrgent();
     } else {
-      data.punches.forEach(function (p) {
-        html += '<div class="row"><span>' + p.type + '</span><span class="t">' + p.time + '</span></div>';
-      });
+      getPositionBackground();
     }
-    box.innerHTML = html;
-    box.style.display = 'block';
-  }
-  
-  document.getElementById('bindBtn').onclick = function () {
-    const sel = document.getElementById('bindEmp');
-    if (!sel.value) return showResult('err', '❌', '請選擇你的名字', '');
-    this.disabled = true;
-    showResult('info', '⏳', '綁定中…', '');
-    api('bind', { idToken: ID_TOKEN, emp_id: sel.value }).then(function (res) {
-      if (res.ok) { showResult('ok', '✅', '綁定成功', res.name + '，即將進入打卡'); setTimeout(function () { location.reload(); }, 1500); }
-      else { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定失敗', res.reason || ''); }
-    }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
-  };
-  
-  // 🔥 秒速打卡：用已經準備好的定位和 IP
-  document.getElementById('submit').onclick = async function () {
-    const btn = this;
-    if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
-    btn.disabled = true;
-    showResult('info', '📍', '打卡中…', '');
-    
-    const box = document.getElementById('today');
-    box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 更新中...</div>';
-    box.style.display = 'block';
-    
-    try {
-      // ✅ 直接用快取的位置（已在背景持續更新）
-      let pos = CACHED_POS || { lat: 0, lng: 0, accuracy: 0 };
-      let ip = CACHED_IP;
-      
-      const res = await api('punch', {
-        idToken: ID_TOKEN, store_id: STORE_ID, type: PUNCH_TYPE,
-        lat: pos.lat, lng: pos.lng, accuracy: Math.round(pos.accuracy),
-        client_ip: ip, user_agent: navigator.userAgent
-      });
-      
-      btn.disabled = false;
-      const storeName = document.getElementById('storeName').textContent;
-      
-      if (res.ok) {
-        showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
-        renderTodayData(res);
-        localStorage.setItem('punchCache', JSON.stringify(res));
-      } else {
-        showResult('err', '❌', '打卡失敗', res.reason || '');
-        api('today', { idToken: ID_TOKEN }).then(renderTodayData);
+
+    preloadClientIp();
+
+    liff.init({ liffId: LIFF_ID }).then(function () {
+      if (!liff.isLoggedIn()) { liff.login(); return; }
+      ID_TOKEN = liff.getIDToken();
+      document.getElementById('app').style.display = 'block';
+      loadData();
+    }).catch(function (e) {
+      document.getElementById('app').style.display = 'block';
+      showResult('err', '❌', 'LINE 初始化失敗', String(e));
+    });
+
+    async function loadData() {
+      showResult('info', '⏳', '載入中…', '');
+
+      try {
+        const data = await api('bootstrap', { idToken: ID_TOKEN });
+        if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
+
+        if (data.bound) {
+          document.getElementById('punchBox').style.display = 'block';
+          document.getElementById('who').textContent = '👤 ' + data.emp.name;
+          STORE_ID = data.emp.store_id || '';
+          let sname = data.emp.store_name || '';
+
+          if (!STORE_ID || !sname) {
+            (data.stores || []).forEach(function (s) { if (s.store_id === STORE_ID) sname = s.store_name; });
+          }
+
+          if (STORE_ID) {
+            document.getElementById('storeName').textContent = sname || STORE_ID;
+          } else {
+            document.getElementById('storeName').textContent = '尚未設定店別';
+            document.getElementById('submit').disabled = true;
+            showResult('err', '⚠️', '尚未設定店別', '請聯絡管理者在後台設定你的店別');
+          }
+
+          renderTodayData(data);
+          localStorage.setItem('punchCache', JSON.stringify(data));
+        } else {
+          document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
+          document.getElementById('bindBox').style.display = 'block';
+          const bindEmp = document.getElementById('bindEmp');
+          (data.employees || []).forEach(function (e) { bindEmp.add(new Option(e.name, e.emp_id)); });
+        }
+
+        hideResult();
+      } catch (e) {
+        showResult('err', '❌', '載入錯誤', String(e));
       }
-    } catch (e) {
-      btn.disabled = false;
-      showResult('err', '❌', '打卡失敗', e.message || String(e));
     }
-  };
-  
-  function showResult(type, icon, title, detail) {
-    const r = document.getElementById('result');
-    r.className = 'result ' + type;
-    r.innerHTML = '<div class="icon">' + icon + '</div><div class="title">' + title + '</div>' +
-                  (detail ? '<div class="detail">' + detail + '</div>' : '');
-  }
-  
-  function hideResult() {
-    document.getElementById('result').className = 'result';
-  }
-</script>
+
+    function renderTodayData(data) {
+      const box = document.getElementById('today');
+      if (!data || !data.ok) return;
+
+      let html = '<h3>📋 今日打卡記錄（' + (data.date || '') + '）</h3>';
+      if (!data.punches || data.punches.length === 0) {
+        html += '<div class="empty">今天還沒有打卡記錄</div>';
+      } else {
+        data.punches.forEach(function (p) {
+          html += '<div class="row"><span>' + p.type + '</span><span class="t">' + p.time + '</span></div>';
+        });
+      }
+      box.innerHTML = html;
+      box.style.display = 'block';
+    }
+
+    document.getElementById('bindBtn').onclick = function () {
+      const sel = document.getElementById('bindEmp');
+      if (!sel.value) return showResult('err', '❌', '請選擇你的名字', '');
+      this.disabled = true;
+      showResult('info', '⏳', '綁定中…', '');
+      api('bind', { idToken: ID_TOKEN, emp_id: sel.value }).then(function (res) {
+        if (res.ok) { showResult('ok', '✅', '綁定成功', res.name + '，即將進入打卡'); setTimeout(function () { location.reload(); }, 1500); }
+        else { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定失敗', res.reason || ''); }
+      }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
+    };
+
+    document.getElementById('submit').onclick = async function () {
+      const btn = this;
+      if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
+      btn.disabled = true;
+      showResult('info', '📍', '打卡中，請稍候…', '');
+
+      const box = document.getElementById('today');
+      box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 更新中...</div>';
+      box.style.display = 'block';
+
+      try {
+        let pos = CACHED_POS;
+
+        // 🔥 優化 2：智慧等待迴圈。如果沒 Wi-Fi 也還沒抓到 GPS，最多幫他等 4.5 秒 (15次 * 300ms)
+        if (!CACHED_WIFI && !CACHED_POS) {
+          pos = await new Promise((resolve) => {
+            let attempts = 0;
+            let checkInterval = setInterval(() => {
+              if (CACHED_POS) {
+                clearInterval(checkInterval);
+                resolve(CACHED_POS);
+              }
+              attempts++;
+              if (attempts >= 15) { // 等待 4.5 秒後真的不行了，再給後端 0,0 讓它報錯
+                clearInterval(checkInterval);
+                resolve({ lat: 0, lng: 0, accuracy: 0 });
+              }
+            }, 300);
+          });
+        }
+
+        if (!pos) pos = { lat: 0, lng: 0, accuracy: 0 };
+        const ip = CACHED_IP;
+
+        const res = await api('punch', {
+          idToken: ID_TOKEN, store_id: STORE_ID, type: PUNCH_TYPE,
+          lat: pos.lat, lng: pos.lng, accuracy: Math.round(pos.accuracy),
+          client_ip: ip, user_agent: navigator.userAgent
+        });
+
+        btn.disabled = false;
+        const storeName = document.getElementById('storeName').textContent;
+
+        if (res.ok) {
+          showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
+          renderTodayData(res);
+          localStorage.setItem('punchCache', JSON.stringify(res));
+        } else {
+          showResult('err', '❌', '打卡失敗', res.reason || '');
+          api('today', { idToken: ID_TOKEN }).then(renderTodayData);
+        }
+      } catch (e) {
+        btn.disabled = false;
+        showResult('err', '❌', '打卡失敗', e.message || String(e));
+      }
+    };
+
+    function showResult(type, icon, title, detail) {
+      const r = document.getElementById('result');
+      r.className = 'result ' + type;
+      r.innerHTML = '<div class="icon">' + icon + '</div><div class="title">' + title + '</div>' +
+                    (detail ? '<div class="detail">' + detail + '</div>' : '');
+    }
+
+    function hideResult() {
+      document.getElementById('result').className = 'result';
+    }
+  </script>
 </body>
 </html>
