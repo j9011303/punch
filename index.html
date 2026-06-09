@@ -75,7 +75,6 @@
   let STORE_ID = '';
   let CACHED_POS = null;
   let CACHED_IP = '';
-  let CACHED_WIFI = false;  // 🔥 快取 WiFi 狀態
   
   async function api(action, params) {
     const res = await fetch(EXEC_URL, {
@@ -93,27 +92,30 @@
     return type === 'wifi' || type === 'ethernet' || type === 'other';
   }
   
-  // ⚡ 加急定位（沒 WiFi 時使用，超時 1000ms）
-  function getPositionUrgent() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
+  // ✅ 持續追蹤定位（頁面加載就開始，永遠保有最新位置）
+  function startContinuousPositioning() {
+    if (!navigator.geolocation) {
+      console.log('此瀏覽器不支援定位');
+      return;
+    }
+    
+    navigator.geolocation.watchPosition(
       function (p) {
-        CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+        CACHED_POS = { 
+          lat: p.coords.latitude, 
+          lng: p.coords.longitude, 
+          accuracy: p.coords.accuracy 
+        };
+        console.log('✅ 位置已更新：' + CACHED_POS.lat.toFixed(4) + ', ' + CACHED_POS.lng.toFixed(4) + ' (精度: ' + Math.round(CACHED_POS.accuracy) + 'm)');
       },
-      null,
-      { enableHighAccuracy: false, timeout: 1000, maximumAge: 0 }
-    );
-  }
-  
-  // 後台定位（有 WiFi 時使用，超時 500ms）
-  function getPositionBackground() {
-    if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
-      function (p) {
-        CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+      function (error) {
+        console.log('定位失敗：' + error.message);
       },
-      null,
-      { enableHighAccuracy: false, timeout: 500, maximumAge: 0 }
+      { 
+        enableHighAccuracy: false,  // 不需要高精度，省電
+        timeout: 10000, 
+        maximumAge: 5000  // 5 秒內的快取位置可用
+      }
     );
   }
   
@@ -122,8 +124,8 @@
       fetch('https://api.ipify.org?format=json').then(r => r.json()),
       new Promise((_, reject) => setTimeout(() => reject(), 2000))
     ])
-      .then(data => { CACHED_IP = data.ip; })
-      .catch(() => { CACHED_IP = ''; });
+      .then(data => { CACHED_IP = data.ip; console.log('✅ IP 已取得：' + CACHED_IP); })
+      .catch(() => { CACHED_IP = ''; console.log('⚠️ IP 取得失敗'); });
   }
   
   function showCachedData() {
@@ -143,18 +145,9 @@
     } catch (e) {}
   }
   
-  // 🔥 頁面加載時立即判定 WiFi 並準備定位
+  // 🔥 頁面加載時立即開始準備定位、IP 和快取資料
   showCachedData();
-  CACHED_WIFI = isConnectedToWiFi();
-  
-  if (!CACHED_WIFI) {
-    // 沒 WiFi → 加急抓定位（可能 1 秒內）
-    getPositionUrgent();
-  } else {
-    // 有 WiFi → 後台抓定位（備選用）
-    getPositionBackground();
-  }
-  
+  startContinuousPositioning();  // ✅ 改成持續追蹤
   preloadClientIp();
   
   liff.init({ liffId: LIFF_ID }).then(function () {
@@ -235,7 +228,7 @@
     }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
   };
   
-  // 🔥 打卡優化：0 判定時間，直接發送
+  // 🔥 秒速打卡：用已經準備好的定位和 IP
   document.getElementById('submit').onclick = async function () {
     const btn = this;
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
@@ -247,24 +240,9 @@
     box.style.display = 'block';
     
     try {
-      // 🔥 直接用已經準備好的定位和 WiFi 狀態（0 等待）
+      // ✅ 直接用快取的位置（已在背景持續更新）
       let pos = CACHED_POS || { lat: 0, lng: 0, accuracy: 0 };
-      
-      // 如果沒 WiFi 且定位還沒準備好，再等 300ms
-      if (!CACHED_WIFI && !CACHED_POS) {
-        try {
-          pos = await Promise.race([
-            new Promise((resolve, reject) => {
-              if (CACHED_POS) resolve(CACHED_POS);
-              else setTimeout(() => reject(), 300);  // 最多再等 300ms
-            })
-          ]);
-        } catch (e) {
-          pos = { lat: 0, lng: 0, accuracy: 0 };
-        }
-      }
-      
-      const ip = CACHED_IP;
+      let ip = CACHED_IP;
       
       const res = await api('punch', {
         idToken: ID_TOKEN, store_id: STORE_ID, type: PUNCH_TYPE,
