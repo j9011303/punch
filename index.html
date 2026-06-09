@@ -2,179 +2,246 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <meta name="color-scheme" content="light">
   <title>門市打卡</title>
   <script src="https://liff.line.me/sdk/web/liff.js"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      background-color: #fbf1e3; /* 恢復原本溫暖的米黃色 */
-      color: #5d4037;
-      padding: 15px;
-    }
-    
-    /* 🚨 急救按鈕 (預設隱藏) */
-    #rescueBtn {
-      display: none;
-      background: #ffdddd;
-      color: #c00;
-      padding: 15px;
-      text-align: center;
-      font-weight: bold;
-      margin: 0 auto 20px auto;
-      border-radius: 8px;
-      border: 1px solid #f5b7b1;
-      cursor: pointer;
-      max-width: 500px;
-      box-shadow: 0 4px 6px rgba(204,0,0,0.1);
+      background-color: #fbf1e3;
+      color: #333;
+      padding: 10px;
     }
 
     #app {
+      display: none;
       max-width: 500px;
       margin: 0 auto;
     }
-    
-    /* 標題區塊 */
+
     .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px 12px 0 0;
       text-align: center;
-      margin-bottom: 20px;
-      margin-top: 10px;
     }
+
     .header h1 {
       font-size: 24px;
-      color: #8D6E63;
       margin-bottom: 8px;
     }
+
     .header #who {
-      font-size: 16px;
-      color: #2980B9;
-      min-height: 20px;
+      font-size: 18px;
+      opacity: 0.9;
     }
 
-    /* 白色卡片區塊 */
-    .content {
-      background: #fffdfa;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      min-height: 200px; /* 確保就算沒內容也不會扁掉 */
-    }
-
-    /* 店別顯示框 */
-    .store-label {
+    .header #storeName {
       font-size: 14px;
-      color: #8D6E63;
-      margin-bottom: 8px;
-    }
-    .store-box {
-      background-color: #FFF3E0;
-      border: 1px solid #FFE0B2;
-      padding: 16px;
-      border-radius: 8px;
-      text-align: center;
-      font-size: 22px;
-      font-weight: bold;
-      color: #D35400;
-      margin-bottom: 20px;
+      opacity: 0.8;
+      margin-top: 4px;
     }
 
-    /* 原本的橘色大按鈕 */
-    #submit, #bindBtn {
-      width: 100%;
-      padding: 16px;
-      background-color: #E67E22;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 20px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-bottom: 20px;
-      box-shadow: 0 4px 6px rgba(230, 126, 34, 0.3);
-      transition: opacity 0.2s;
+    .content {
+      background: white;
+      padding: 20px;
+      border-radius: 0 0 12px 12px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
-    #submit:active, #bindBtn:active { opacity: 0.8; }
-    #submit:disabled, #bindBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    /* 狀態提示框 */
     #result {
       margin-bottom: 20px;
       padding: 16px;
       border-radius: 8px;
       text-align: center;
       display: none;
+      background-color: #f0f0f0;
     }
-    #result.ok { display: block; background-color: #E8F8F5; color: #27AE60; border: 1px solid #A3E4D7; }
-    #result.err { display: block; background-color: #FDEDEC; color: #C0392B; border: 1px solid #F5B7B1; }
-    #result.info { display: block; background-color: #EBF5FB; color: #2980B9; border: 1px solid #AED6F1; }
-    .icon { font-size: 40px; margin-bottom: 10px; }
-    .title { font-weight: bold; font-size: 18px; margin-bottom: 6px; }
-    .detail { font-size: 14px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 
-    /* 今日打卡記錄 */
+    #result.ok {
+      display: block;
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    #result.err {
+      display: block;
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+
+    #result.info {
+      display: block;
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+
+    .icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .title {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .detail {
+      font-size: 14px;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    #punchBox {
+      display: none;
+    }
+
+    #submit {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 20px;
+      transition: opacity 0.3s;
+    }
+
+    #submit:active {
+      opacity: 0.8;
+    }
+
+    #submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     #today {
       display: none;
-      background: #FFFAF0;
+      background: #f8f9fa;
       padding: 16px;
       border-radius: 8px;
-      border: 1px solid #F5DEB3;
       margin-top: 16px;
     }
-    #today h3 { margin-bottom: 12px; font-size: 15px; color: #8D6E63; }
-    .empty { text-align: center; color: #B0BEC5; padding: 12px; font-size: 14px;}
-    .row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #E0E0E0; align-items: center; }
-    .row:last-child { border-bottom: none; }
-    .row span:first-child { flex: 1; font-weight: 500; color: #5D4037; }
-    .row .t { color: #E67E22; font-weight: bold; font-size: 16px; }
 
-    #punchBox, #bindBox { display: none; }
-    #bindEmp { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 12px; }
+    #today h3 {
+      margin-bottom: 12px;
+      font-size: 16px;
+      color: #333;
+    }
 
-    .footer-note {
+    .empty {
       text-align: center;
-      font-size: 12px;
-      color: #B0BEC5;
-      margin-top: 20px;
+      color: #999;
+      padding: 12px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #e0e0e0;
+      align-items: center;
+    }
+
+    .row:last-child {
+      border-bottom: none;
+    }
+
+    .row span:first-child {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .row .t {
+      color: #667eea;
+      font-weight: bold;
+      font-size: 18px;
+    }
+
+    #bindBox {
+      display: none;
+    }
+
+    #bindEmp {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      margin-bottom: 12px;
+    }
+
+    #bindBtn {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #bindBtn:active {
+      opacity: 0.8;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 0;
+      }
+
+      #app {
+        margin: 0;
+      }
+
+      .header {
+        border-radius: 0;
+      }
+
+      .content {
+        border-radius: 0;
+      }
     }
   </style>
 </head>
 <body>
-
-  <div id="rescueBtn" onclick="localStorage.clear(); window.location.href=window.location.href.split('?')[0] + '?v=' + new Date().getTime();">
-    ⚠️ 畫面卡住或空白？點我強制修復並更新
-  </div>
-
   <div id="app">
     <div class="header">
-      <h1>🍲 門市打卡</h1>
+      <h1>🏪 門市打卡系統</h1>
       <div id="who">👤 載入中…</div>
+      <div id="storeName"></div>
     </div>
-    
     <div class="content">
       <div id="result"></div>
 
       <div id="punchBox">
-        <div class="store-label">店別</div>
-        <div class="store-box" id="storeName">載入中...</div>
-        
-        <button id="submit">打卡</button>
+        <button id="submit">👊 打卡</button>
         <div id="today"></div>
       </div>
 
       <div id="bindBox">
-        <h3 style="margin-bottom: 10px; color:#8D6E63;">👤 請選擇你的名字</h3>
+        <h3>👤 請選擇你的名字</h3>
         <select id="bindEmp">
           <option value="">-- 選擇員工 --</option>
         </select>
-        <button id="bindBtn" style="margin-top:10px;">✅ 綁定 LINE</button>
+        <button id="bindBtn">✅ 綁定 LINE</button>
       </div>
-      
-      <div class="footer-note">需開啟定位權限</div>
     </div>
   </div>
 
@@ -187,11 +254,6 @@
     let CACHED_POS = null;
     let CACHED_IP = '';
     let CACHED_WIFI = false;
-
-    // 🚨 終極防護：無論發生什麼事，只要 5 秒後系統還沒完全就緒，就顯示急救按鈕
-    let loadTimeout = setTimeout(function() {
-      document.getElementById('rescueBtn').style.display = 'block';
-    }, 5000);
 
     async function api(action, params) {
       const res = await fetch(EXEC_URL, {
@@ -209,19 +271,26 @@
       return type === 'wifi' || type === 'ethernet' || type === 'other';
     }
 
+    // 🔥 優化 1：把超時時間從 1 秒拉長到 5 秒，給手機一點時間找衛星
     function getPositionUrgent() {
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(
-        function (p) { CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }; },
-        null, { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        function (p) {
+          CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+        },
+        null,
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     }
 
     function getPositionBackground() {
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(
-        function (p) { CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }; },
-        null, { enableHighAccuracy: false, timeout: 3000, maximumAge: 0 }
+        function (p) {
+          CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+        },
+        null,
+        { enableHighAccuracy: false, timeout: 3000, maximumAge: 0 }
       );
     }
 
@@ -229,42 +298,47 @@
       Promise.race([
         fetch('https://api.ipify.org?format=json').then(r => r.json()),
         new Promise((_, reject) => setTimeout(() => reject(), 2000))
-      ]).then(data => { CACHED_IP = data.ip; }).catch(() => { CACHED_IP = ''; });
+      ])
+        .then(data => { CACHED_IP = data.ip; })
+        .catch(() => { CACHED_IP = ''; });
     }
 
     function showCachedData() {
+      const cached = localStorage.getItem('punchCache');
+      if (!cached) return;
+
       try {
-        const cached = localStorage.getItem('punchCache');
-        if (!cached) return;
-        
         const data = JSON.parse(cached);
-        if (data && data.bound && data.emp) {
+        if (data.bound) {
+          document.getElementById('app').style.display = 'block';
           document.getElementById('punchBox').style.display = 'block';
-          document.getElementById('who').textContent = '👤 ' + (data.emp.name || '未知');
+          document.getElementById('who').textContent = '👤 ' + data.emp.name;
           STORE_ID = data.emp.store_id || '';
           document.getElementById('storeName').textContent = data.emp.store_name || STORE_ID;
           renderTodayData(data);
         }
-      } catch (e) {
-        // 如果快取壞了（導致解析失敗），立刻清除它，避免當機
-        localStorage.removeItem('punchCache');
-      }
+      } catch (e) {}
     }
 
     showCachedData();
     CACHED_WIFI = isConnectedToWiFi();
 
-    if (!CACHED_WIFI) { getPositionUrgent(); } else { getPositionBackground(); }
+    if (!CACHED_WIFI) {
+      getPositionUrgent();
+    } else {
+      getPositionBackground();
+    }
+
     preloadClientIp();
 
     liff.init({ liffId: LIFF_ID }).then(function () {
       if (!liff.isLoggedIn()) { liff.login(); return; }
       ID_TOKEN = liff.getIDToken();
+      document.getElementById('app').style.display = 'block';
       loadData();
     }).catch(function (e) {
+      document.getElementById('app').style.display = 'block';
       showResult('err', '❌', 'LINE 初始化失敗', String(e));
-      clearTimeout(loadTimeout);
-      document.getElementById('rescueBtn').style.display = 'block'; // LIFF 失敗也叫出急救按鈕
     });
 
     async function loadData() {
@@ -272,16 +346,10 @@
 
       try {
         const data = await api('bootstrap', { idToken: ID_TOKEN });
-        
-        // 成功連線後，解除急救警報
-        clearTimeout(loadTimeout); 
-        document.getElementById('rescueBtn').style.display = 'none';
-
         if (!data.ok) { showResult('err', '❌', '載入失敗', data.error || ''); return; }
 
         if (data.bound) {
           document.getElementById('punchBox').style.display = 'block';
-          document.getElementById('bindBox').style.display = 'none';
           document.getElementById('who').textContent = '👤 ' + data.emp.name;
           STORE_ID = data.emp.store_id || '';
           let sname = data.emp.store_name || '';
@@ -301,11 +369,9 @@
           renderTodayData(data);
           localStorage.setItem('punchCache', JSON.stringify(data));
         } else {
-          document.getElementById('punchBox').style.display = 'none';
           document.getElementById('who').textContent = '👤 ' + (data.line_name || '');
           document.getElementById('bindBox').style.display = 'block';
           const bindEmp = document.getElementById('bindEmp');
-          bindEmp.innerHTML = '<option value="">-- 選擇員工 --</option>'; // 清空重置
           (data.employees || []).forEach(function (e) { bindEmp.add(new Option(e.name, e.emp_id)); });
         }
 
@@ -337,17 +403,9 @@
       this.disabled = true;
       showResult('info', '⏳', '綁定中…', '');
       api('bind', { idToken: ID_TOKEN, emp_id: sel.value }).then(function (res) {
-        if (res.ok) { 
-          showResult('ok', '✅', '綁定成功', res.name + '，即將進入打卡'); 
-          setTimeout(function () { location.reload(); }, 1500); 
-        } else { 
-          document.getElementById('bindBtn').disabled = false; 
-          showResult('err', '❌', '綁定失敗', res.reason || ''); 
-        }
-      }).catch(function (e) { 
-        document.getElementById('bindBtn').disabled = false; 
-        showResult('err', '❌', '綁定錯誤', String(e)); 
-      });
+        if (res.ok) { showResult('ok', '✅', '綁定成功', res.name + '，即將進入打卡'); setTimeout(function () { location.reload(); }, 1500); }
+        else { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定失敗', res.reason || ''); }
+      }).catch(function (e) { document.getElementById('bindBtn').disabled = false; showResult('err', '❌', '綁定錯誤', String(e)); });
     };
 
     document.getElementById('submit').onclick = async function () {
@@ -363,7 +421,7 @@
       try {
         let pos = CACHED_POS;
 
-        // 如果沒連 WiFi 且沒有定位，智慧等待最多 4.5 秒
+        // 🔥 優化 2：智慧等待迴圈。如果沒 Wi-Fi 也還沒抓到 GPS，最多幫他等 4.5 秒 (15次 * 300ms)
         if (!CACHED_WIFI && !CACHED_POS) {
           pos = await new Promise((resolve) => {
             let attempts = 0;
@@ -373,7 +431,7 @@
                 resolve(CACHED_POS);
               }
               attempts++;
-              if (attempts >= 15) {
+              if (attempts >= 15) { // 等待 4.5 秒後真的不行了，再給後端 0,0 讓它報錯
                 clearInterval(checkInterval);
                 resolve({ lat: 0, lng: 0, accuracy: 0 });
               }
@@ -403,7 +461,7 @@
         }
       } catch (e) {
         btn.disabled = false;
-        showResult('err', '❌', '打卡系統異常', e.message || String(e));
+        showResult('err', '❌', '打卡失敗', e.message || String(e));
       }
     };
 
