@@ -108,8 +108,25 @@
     navigator.geolocation.watchPosition(
       function (p) { CACHED_POS = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }; },
       function (error) { console.log('定位失敗：' + error.message); },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 5000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
     );
+  }
+
+  // ✅ 取得「真實」定位：有有效快取就用，否則現場主動定位並等待；失敗回傳 null（絕不送 0,0）
+  function getPositionStrict(timeoutMs) {
+    return new Promise(function (resolve) {
+      if (CACHED_POS && CACHED_POS.lat && CACHED_POS.lng) return resolve(CACHED_POS);
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        function (p) {
+          var pos = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy };
+          CACHED_POS = pos;
+          resolve(pos);
+        },
+        function () { resolve(null); },
+        { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 3000 }
+      );
+    });
   }
 
   function preloadClientIp() {
@@ -246,20 +263,27 @@
     const btn = this;
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
     btn.disabled = true;
-    showResult('info', '📍', '打卡中…', '');
-
-    const box = document.getElementById('today');
-    box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 更新中...</div>';
-    box.style.display = 'block';
 
     try {
-      let pos = CACHED_POS || { lat: 0, lng: 0, accuracy: 0 };
-      let ip = CACHED_IP;
+      // 1️⃣ 先確認拿到真實座標；沒有就現場定位並等待（不再送 0,0）
+      let pos = (CACHED_POS && CACHED_POS.lat && CACHED_POS.lng) ? CACHED_POS : null;
+      if (!pos) {
+        showResult('info', '📍', '定位中…請稍候', '正在取得你的位置，約需 2~5 秒\n若一直定位不到，請靠近門口或窗邊');
+        pos = await getPositionStrict(15000);
+      }
+
+      // 2️⃣ 送出：有座標就帶座標；真的定不到位就帶 null（交給後端用 WiFi/IP 判斷或回明確訊息），絕不送 0,0
+      showResult('info', '⏳', '打卡中…', '');
+      const box = document.getElementById('today');
+      box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 更新中...</div>';
+      box.style.display = 'block';
 
       const res = await api('punch', {
         idToken: ID_TOKEN, store_id: STORE_ID, type: PUNCH_TYPE,
-        lat: pos.lat, lng: pos.lng, accuracy: Math.round(pos.accuracy),
-        client_ip: ip, user_agent: navigator.userAgent
+        lat: pos ? pos.lat : null,
+        lng: pos ? pos.lng : null,
+        accuracy: pos ? Math.round(pos.accuracy) : null,
+        client_ip: CACHED_IP, user_agent: navigator.userAgent
       });
 
       btn.disabled = false;
