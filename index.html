@@ -204,6 +204,22 @@
       opacity: 0.8;
     }
 
+    #rescueBtn {
+      display: none;
+      background: #ffdddd;
+      color: #c00;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+      margin: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      cursor: pointer;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
     @media (max-width: 480px) {
       body {
         padding: 0;
@@ -224,7 +240,7 @@
   </style>
 </head>
 <body>
-  <div id="rescueBtn" style="background:#ffdddd; color:#c00; padding:15px; text-align:center; font-weight:bold; margin:10px; border-radius:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" onclick="localStorage.clear(); window.location.href=window.location.href.split('?')[0] + '?v=' + new Date().getTime();">
+  <div id="rescueBtn" onclick="localStorage.clear(); window.location.href=window.location.href.split('?')[0] + '?v=' + new Date().getTime();">
     ⚠️ 畫面卡住？點我強制修復
   </div>
 
@@ -262,6 +278,13 @@
     let CACHED_IP = '';
     let CACHED_WIFI = false;
 
+    // 🚨 在 5 秒後如果還沒成功載入，就顯示急救按鈕
+    let loadTimeout = setTimeout(function() {
+      if (!document.getElementById('app').style.display || document.getElementById('app').style.display === 'none') {
+        document.getElementById('rescueBtn').style.display = 'block';
+      }
+    }, 5000);
+
     async function api(action, params) {
       const res = await fetch(EXEC_URL, {
         method: 'POST',
@@ -278,7 +301,6 @@
       return type === 'wifi' || type === 'ethernet' || type === 'other';
     }
 
-    // 🔥 優化 1：把超時時間從 1 秒拉長到 5 秒，給手機一點時間找衛星
     function getPositionUrgent() {
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(
@@ -346,9 +368,11 @@
     }).catch(function (e) {
       document.getElementById('app').style.display = 'block';
       showResult('err', '❌', 'LINE 初始化失敗', String(e));
+      clearTimeout(loadTimeout);
     });
 
     async function loadData() {
+      clearTimeout(loadTimeout);
       showResult('info', '⏳', '載入中…', '');
 
       try {
@@ -382,7 +406,6 @@
           (data.employees || []).forEach(function (e) { bindEmp.add(new Option(e.name, e.emp_id)); });
         }
 
-        document.getElementById('rescueBtn').style.display = 'none';
         hideResult();
       } catch (e) {
         showResult('err', '❌', '載入錯誤', String(e));
@@ -429,7 +452,6 @@
       try {
         let pos = CACHED_POS;
 
-        // 🔥 優化 2：智慧等待迴圈。如果沒 Wi-Fi 也還沒抓到 GPS，最多幫他等 4.5 秒 (15次 * 300ms)
         if (!CACHED_WIFI && !CACHED_POS) {
           pos = await new Promise((resolve) => {
             let attempts = 0;
@@ -439,7 +461,7 @@
                 resolve(CACHED_POS);
               }
               attempts++;
-              if (attempts >= 15) { // 等待 4.5 秒後真的不行了，再給後端 0,0 讓它報錯
+              if (attempts >= 15) {
                 clearInterval(checkInterval);
                 resolve({ lat: 0, lng: 0, accuracy: 0 });
               }
