@@ -81,12 +81,26 @@
   let CACHED_IP = '';
   let LAST_TODAY = null;                  // 最後一次拿到的今日記錄
 
-  function api(action, params) {
-    return fetch(EXEC_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },  // text/plain → 不觸發 CORS preflight
-      body: JSON.stringify(Object.assign({ action: action }, params || {}))
-    }).then(function (res) { return res.json(); });
+async function api(action, params) {
+    const controller = new AbortController();
+    const timer = setTimeout(function () { controller.abort(); }, 20000); // 20 秒上限，避免無限等待
+    try {
+      const res = await fetch(EXEC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ action: action }, params || {})),
+        signal: controller.signal
+      });
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        // 非 JSON（多半是冷啟動/轉址造成），丟給呼叫端當「不確定」處理，不直接判失敗
+        throw new Error('伺服器回應異常');
+      }
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   // 📍 頁面一開就持續定位（watchPosition 會一直更新最新位置）
@@ -238,39 +252,54 @@
     });
   }
 
-  document.getElementById('submit').onclick = async function () {
+document.getElementById('submit').onclick = async function () {
     const btn = this;
     if (!STORE_ID) return showResult('err', '❌', '尚未設定店別', '請聯絡管理者');
     btn.disabled = true;
     showResult('info', '📍', '處理中…請稍候', '');
 
+    const box = document.getElementById('today');
+    box.innerHTML = '<h3>📋 今日打卡紀錄</h3><div style="text-align:center; padding: 20px; color: #999;">⏳ 載入中...</div>';
+    box.style.display = 'block';
+
     try {
       const pos = CACHED_POS || await getPosition();
+      const ip = CACHED_IP;
 
       const res = await api('punch', {
         idToken: ID_TOKEN, store_id: STORE_ID, type: PUNCH_TYPE,
         lat: pos.lat, lng: pos.lng, accuracy: Math.round(pos.accuracy),
-        client_ip: CACHED_IP, user_agent: navigator.userAgent
+        client_ip: ip, user_agent: navigator.userAgent
       });
 
-      btn.disabled = false;
       const storeName = document.getElementById('storeName').textContent;
+      // 後端新版會回 duplicate:true；舊版相容：reason 含「重複」也視為已完成
+      const isDuplicate = res.duplicate === true ||
+        (!res.ok && res.reason && res.reason.indexOf('重複') >= 0);
 
-      if (res.ok) {
-        showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + res.time);
-        // 🚀 punch 回應已內含最新今日記錄，直接渲染，不再多打一次 today
-        if (res.punches) {
-          renderTodayData({ ok: true, date: res.date, punches: res.punches });
-        } else {
-          api('today', { idToken: ID_TOKEN }).then(renderTodayData);
-        }
+      if (res.ok && !res.duplicate) {
+        // ✅ 正常成功 → 按鈕維持鎖定，避免重複按
+        showResult('ok', '✅', '打卡成功', (res.name || '') + '｜' + storeName + '\n' + (res.time || ''));
+      } else if (isDuplicate) {
+        // ✅ 60 秒內重複 = 其實已成功 → 綠色提示，按鈕維持鎖定
+        showResult('ok', '✅', '已完成打卡', (res.name || '') + '｜' + storeName + '\n剛剛已成功，請勿重複按');
       } else {
+        // ❌ 真正驗證失敗（定位/IP）→ 解鎖，讓員工調整後重試
+        btn.disabled = false;
         showResult('err', '❌', '打卡失敗', res.reason || '');
-        if (LAST_TODAY) renderTodayData(LAST_TODAY);  // 失敗時保留原本的記錄列表
+      }
+
+      // 今日清單：優先用後端回傳的 punches，沒有才再打一次 today
+      if (res.punches) {
+        renderTodayData({ ok: true, date: res.date, punches: res.punches });
+      } else {
+        api('today', { idToken: ID_TOKEN }).then(renderTodayData).catch(function () {});
       }
     } catch (e) {
+      // ⏳ 逾時／回應異常：伺服器可能已寫入，不要報「失敗」害員工狂按
       btn.disabled = false;
-      showResult('err', '❌', '打卡失敗', e.message || String(e));
+      showResult('info', '⏳', '連線逾時', '可能已打卡成功，請先別重複按，稍候下拉重新整理確認');
+      api('today', { idToken: ID_TOKEN }).then(renderTodayData).catch(function () {});
     }
   };
 
