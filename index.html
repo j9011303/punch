@@ -73,6 +73,9 @@
   const LIFF_ID = '2010314288-Vh9dMEyC';
   const EXEC_URL = 'https://script.google.com/macros/s/AKfycbzGcQLml4LSMtGpCk14P7QT6Hn2eA4Mz0s-REha5O9IBXoUvgoxQIqnANsFOso7XRy6/exec';
   const EMP_CACHE_KEY = 'punch_emp_v1';   // localStorage：綁定資訊快取
+  const TODAY_CACHE_KEY = 'punch_today_v1'; // localStorage：今日打卡紀錄快取
+
+
 
   let ID_TOKEN = '';
   let PUNCH_TYPE = '打卡';
@@ -133,8 +136,29 @@ async function api(action, params) {
   function writeEmpCache(emp) {
     try { localStorage.setItem(EMP_CACHE_KEY, JSON.stringify(emp)); } catch (e) {}
   }
-  function clearEmpCache() {
+function clearEmpCache() {
     try { localStorage.removeItem(EMP_CACHE_KEY); } catch (e) {}
+  }
+
+  // 今日紀錄本機快取（只在同一天才使用，跨日就不顯示舊的）
+  function localToday() {
+    return new Date().toLocaleDateString('sv-SE'); // yyyy-MM-dd（裝置本地）
+  }
+  function readTodayCache() {
+    try {
+      const t = JSON.parse(localStorage.getItem(TODAY_CACHE_KEY));
+      if (t && t.date === localToday()) return t;
+    } catch (e) {}
+    return null;
+  }
+  function writeTodayCache(data) {
+    try { localStorage.setItem(TODAY_CACHE_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+  // 立刻顯示「今日紀錄」框 + 載入中（沒有本機快取時用）
+  function showTodayLoading() {
+    const box = document.getElementById('today');
+    box.innerHTML = '<h3>📋 今日打卡記錄</h3><div class="empty">⏳ 載入中…</div>';
+    box.style.display = 'block';
   }
 
   function showPunchUI(emp) {
@@ -160,7 +184,10 @@ async function api(action, params) {
     const cached = readEmpCache();
     if (cached && cached.store_id) {
       showPunchUI(cached);
-      loadData(true);   // 背景驗證 + 載入今日記錄
+      // 🩹 立刻顯示今日紀錄：有本機快取就先顯示上次的，沒有就顯示載入中
+      const tcache = readTodayCache();
+      if (tcache) { renderTodayData(tcache); } else { showTodayLoading(); }
+      loadData(true);   // 背景拿最新，回來後自動覆蓋
     } else {
       loadData(false);  // 首次使用：等後端回應
     }
@@ -211,6 +238,7 @@ async function api(action, params) {
     const box = document.getElementById('today');
     if (!data || !data.ok) return;
     LAST_TODAY = data;
+    writeTodayCache(data);   // 存本機，下次一開就能即時顯示
 
     let html = '<h3>📋 今日打卡記錄（' + (data.date || '') + '）</h3>';
     if (!data.punches || data.punches.length === 0) {
