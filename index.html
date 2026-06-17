@@ -311,6 +311,10 @@ document.getElementById('submit').onclick = async function () {
       } else if (isDuplicate) {
         // ✅ 60 秒內重複 = 其實已成功 → 綠色提示，按鈕維持鎖定
         showResult('ok', '✅', '已完成打卡', (res.name || '') + '｜' + storeName + '\n剛剛已成功，請勿重複按');
+      } else if (res.code === 'AUTH') {
+        // ⏳ 登入/連線異常（LINE 驗證沒過）→ 不是定位問題，提示稍候再試
+        btn.disabled = false;
+        showResult('info', '⏳', '登入/連線異常', res.reason || '請稍候幾秒再試，或重新開啟打卡頁');
       } else {
         // ❌ 真正驗證失敗（定位/IP）→ 解鎖，讓員工調整後重試
         btn.disabled = false;
